@@ -4,6 +4,7 @@ import Elysia from "elysia";
 import { logger } from "@infrastructure/logging/logger";
 
 import { categoryController } from "@interface/controllers/category.controller";
+import { filterController } from "@interface/controllers/filter.controller";
 import { healthController } from "@interface/controllers/health.controller";
 import { listingController } from "@interface/controllers/listing.controller";
 import { accessLog } from "@interface/middleware/access-log.middleware";
@@ -21,6 +22,7 @@ export function createServer() {
     .use(openapi({ path: "/docs" }))
     .use(healthController)
     .use(categoryController)
+    .use(filterController)
     .use(listingController)
     .listen(env.PORT);
 }

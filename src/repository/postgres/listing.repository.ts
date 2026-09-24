@@ -16,6 +16,8 @@ import { ListingCategoryNotFoundError } from "@domain/errors/listing-error";
 
 import { sql } from "@infrastructure/postgres/client";
 
+import { categoryScopeIds } from "./category-scope";
+
 type ListingRow = Omit<Listing, "price"> & { price: string };
 type ListingPageRow = ListingRow & { cursor_value: string };
 
@@ -49,19 +51,7 @@ export class PgListingRepository implements ListingRepository {
     const filters = sql`
       status = 'AVAILABLE'
       AND (${query.category_id ?? null}::uuid IS NULL OR category_id = ${query.category_id ?? null}::uuid)
-      AND (${query.scope_category_id ?? null}::uuid IS NULL OR category_id IN (
-        WITH RECURSIVE category_scope AS (
-          SELECT id, ARRAY[id] AS path
-          FROM categories
-          WHERE id = ${query.scope_category_id ?? null}::uuid
-          UNION ALL
-          SELECT child.id, category_scope.path || child.id
-          FROM categories child
-          JOIN category_scope ON child.parent_id = category_scope.id
-          WHERE NOT child.id = ANY(category_scope.path)
-        )
-        SELECT id FROM category_scope
-      ))
+      ${query.scope_category_id ? sql`AND category_id IN (${categoryScopeIds(query.scope_category_id)})` : sql``}
       AND (${query.make ?? null}::text IS NULL OR lower(make) = lower(${query.make ?? null}::text))
       AND (${query.model ?? null}::text IS NULL OR lower(model) = lower(${query.model ?? null}::text))
       AND (${query.condition ?? null}::listing_conditions IS NULL OR condition = ${query.condition ?? null}::listing_conditions)
