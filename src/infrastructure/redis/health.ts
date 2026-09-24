@@ -1,4 +1,4 @@
-import { redis } from "./redis-client";
+import { redis } from "./client";
 
 export async function checkRedisHealth(): Promise<boolean> {
   try {

@@ -12,10 +12,7 @@ export type ErrorResponse = {
   error: { code: string; details?: ErrorDetail[] };
 };
 
-export function successResponse<T>(
-  data: T,
-  message: string,
-) {
+export function successResponse<T>(data: T, message: string) {
   return { success: true as const, message, data };
 }
 

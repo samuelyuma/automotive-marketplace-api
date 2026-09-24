@@ -1,6 +1,6 @@
-import { redis } from "@infrastructure/cache/redis-client";
-import { sql } from "@infrastructure/database/client";
 import { logger } from "@infrastructure/logging/logger";
+import { sql } from "@infrastructure/postgres/client";
+import { redis } from "@infrastructure/redis/client";
 import { initDependencies } from "@main/dependencies";
 import { createServer } from "@main/server";
 
