@@ -80,3 +80,10 @@ export const listListingsRouteDetail = {
     "Returns available listings with filters, make facets, and cursor pagination. Use sort=created_at|price|mileage|year and direction=asc|desc.",
   tags: ["Listing"],
 };
+
+export const listCategoryListingsRouteDetail = {
+  summary: "Browse Category Listings",
+  description:
+    "Returns available listings in this category and all its subcategories, with the same filters, sort, facets, and cursor pagination as GET /listings.",
+  tags: ["Category", "Listing"],
+};

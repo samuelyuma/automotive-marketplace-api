@@ -6,6 +6,7 @@ import { ListingService } from "@application/service/listing.service";
 import type { Listing } from "@domain/entities/listing";
 
 import { paginatedResponse, successResponse } from "@interface/http/response";
+import { serializeListingDetail } from "@interface/http/serialize-listing-detail";
 import {
   CreateListingModel,
   createListingRouteDetail,
@@ -59,14 +60,6 @@ function serializeCreatedListing(listing: Listing) {
 function serializeUpdatedListing(listing: Listing) {
   return {
     ...serializeListingFields(listing),
-    updated_at: listing.updated_at.toISOString(),
-  };
-}
-
-function serializeListingDetail(listing: Listing) {
-  return {
-    ...serializeListingFields(listing),
-    created_at: listing.created_at.toISOString(),
     updated_at: listing.updated_at.toISOString(),
   };
 }

@@ -18,6 +18,7 @@ export type ListingDirection = "asc" | "desc";
 
 export type ListingFilters = {
   category_id?: string;
+  scope_category_id?: string;
   make?: string;
   model?: string;
   condition?: Listing["condition"];

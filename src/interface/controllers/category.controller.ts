@@ -1,7 +1,9 @@
 import Elysia from "elysia";
 
 import type { CategoryRepository } from "@application/ports/category-repository.port";
+import type { ListingRepository } from "@application/ports/listing-repository.port";
 import { CategoryService } from "@application/service/category.service";
+import { ListingService } from "@application/service/listing.service";
 
 import type {
   CategoryDetail,
@@ -10,7 +12,8 @@ import type {
   UpdatedCategoryWithAttributes,
 } from "@domain/entities/category";
 
-import { successResponse } from "@interface/http/response";
+import { paginatedResponse, successResponse } from "@interface/http/response";
+import { serializeListingDetail } from "@interface/http/serialize-listing-detail";
 import {
   CreateCategoryModel,
   createCategoryRouteDetail,
@@ -28,8 +31,13 @@ import {
   UpdateCategoryModel,
   updateCategoryRouteDetail,
 } from "@interface/validators/category/update-category.validator";
+import {
+  ListListingsModel,
+  listCategoryListingsRouteDetail,
+} from "@interface/validators/listing/list-listings.validator";
 
 import { PgCategoryRepository } from "@repository/postgres/category.repository";
+import { PgListingRepository } from "@repository/postgres/listing.repository";
 
 function serializeCategoryDetail({ category, children }: CategoryDetail) {
   return {
@@ -130,14 +138,17 @@ function serializeUpdatedCategory(category: UpdatedCategoryWithAttributes) {
 
 export function createCategoryController(
   repository: CategoryRepository = new PgCategoryRepository(),
+  listingRepository: ListingRepository = new PgListingRepository(),
 ) {
   const categoryService = new CategoryService(repository);
+  const listingService = new ListingService(listingRepository);
 
   return new Elysia({ prefix: "/categories" })
     .use(CreateCategoryModel)
     .use(GetCategoryModel)
     .use(ListCategoryModel)
     .use(UpdateCategoryModel)
+    .use(ListListingsModel)
     .get(
       "",
       async () =>
@@ -151,6 +162,36 @@ export function createCategoryController(
           500: "category.internal_error",
         },
         detail: listCategoryRouteDetail,
+      },
+    )
+    .get(
+      "/:id/listings",
+      async ({ params, query }) => {
+        await categoryService.getWithChildren(params.id);
+        const page = await listingService.list({
+          ...query,
+          scope_category_id: params.id,
+          sort: query.sort ?? "created_at",
+          direction: query.direction ?? "desc",
+          per_page: query.per_page ?? 20,
+        });
+        return paginatedResponse(
+          page.data.map(serializeListingDetail),
+          "Listings retrieved",
+          page.meta,
+          page.facets,
+        );
+      },
+      {
+        params: "category.detail.params",
+        query: "listing.list.query",
+        response: {
+          200: "listing.list",
+          400: "listing.list.bad_request",
+          404: "category.not_found",
+          500: "listing.list.internal_error",
+        },
+        detail: listCategoryListingsRouteDetail,
       },
     )
     .get(
