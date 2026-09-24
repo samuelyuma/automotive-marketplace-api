@@ -1,6 +1,7 @@
 import type {
   Listing,
   NewListing,
+  SoftDeletedListing,
   UpdateListing,
 } from "@domain/entities/listing";
 import { ListingNotFoundError } from "@domain/errors/listing-error";
@@ -16,6 +17,12 @@ export class ListingService {
 
   async update(id: string, data: UpdateListing): Promise<Listing> {
     const listing = await this.repository.update(id, data);
+    if (!listing) throw new ListingNotFoundError();
+    return listing;
+  }
+
+  async softDelete(id: string): Promise<SoftDeletedListing> {
+    const listing = await this.repository.softDelete(id);
     if (!listing) throw new ListingNotFoundError();
     return listing;
   }

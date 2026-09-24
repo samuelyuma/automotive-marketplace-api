@@ -5,6 +5,7 @@ import type { ListingRepository } from "@application/ports/listing-repository.po
 import type {
   Listing,
   NewListing,
+  SoftDeletedListing,
   UpdateListing,
 } from "@domain/entities/listing";
 import { ListingCategoryNotFoundError } from "@domain/errors/listing-error";
@@ -79,5 +80,15 @@ export class PgListingRepository implements ListingRepository {
     } catch (error) {
       throwListingError(error);
     }
+  }
+
+  async softDelete(id: string): Promise<SoftDeletedListing | null> {
+    const [listing] = await sql<SoftDeletedListing[]>`
+      UPDATE vehicle_listings
+      SET status = 'REMOVED', updated_at = now()
+      WHERE id = ${id} AND status <> 'REMOVED'
+      RETURNING id, status, updated_at
+    `;
+    return listing ?? null;
   }
 }

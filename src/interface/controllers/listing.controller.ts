@@ -11,6 +11,10 @@ import {
   createListingRouteDetail,
 } from "@interface/validators/listing/create-listing.validator";
 import {
+  DeleteListingModel,
+  deleteListingRouteDetail,
+} from "@interface/validators/listing/delete-listing.validator";
+import {
   UpdateListingModel,
   updateListingRouteDetail,
 } from "@interface/validators/listing/update-listing.validator";
@@ -59,6 +63,7 @@ export function createListingController(
   return new Elysia({ prefix: "/listings" })
     .use(CreateListingModel)
     .use(UpdateListingModel)
+    .use(DeleteListingModel)
     .post(
       "",
       async ({ body, status }) => {
@@ -97,6 +102,30 @@ export function createListingController(
           500: "listing.internal_error",
         },
         detail: updateListingRouteDetail,
+      },
+    )
+    .delete(
+      "/:id",
+      async ({ params }) => {
+        const listing = await listingService.softDelete(params.id);
+        return successResponse(
+          {
+            id: listing.id,
+            status: listing.status,
+            updated_at: listing.updated_at.toISOString(),
+          },
+          "Listing deleted",
+        );
+      },
+      {
+        params: "listing.delete.params",
+        response: {
+          200: "listing.deleted",
+          400: "listing.bad_request",
+          404: "listing.not_found",
+          500: "listing.internal_error",
+        },
+        detail: deleteListingRouteDetail,
       },
     );
 }
