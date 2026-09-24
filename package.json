@@ -3,6 +3,8 @@
   "version": "1.0.50",
   "scripts": {
     "dev": "bun run --watch src/index.ts",
+    "docker:up": "docker compose -f docker-compose.dev.yml up --build",
+    "docker:down": "docker compose -f docker-compose.dev.yml down",
     "migrate:up": "bun src/infrastructure/database/migrate.ts up",
     "migrate:down": "bun src/infrastructure/database/migrate.ts down",
     "lint": "biome lint .",

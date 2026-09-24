@@ -15,7 +15,7 @@ export function createServer() {
     .use(errorHandler)
     .use(requestContext)
     .use(accessLog)
-    .use(openapi())
+    .use(openapi({ path: "/docs" }))
     .use(healthController)
     .listen(env.PORT);
 }

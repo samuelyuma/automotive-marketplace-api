@@ -6,10 +6,15 @@ services:
     build:
       context: .
       target: development
-    command: ["bun", "--watch", "--no-clear-screen", "src/index.ts"]
     init: true
     env_file:
       - .env
+    environment:
+      NODE_ENV: production
+      POSTGRES_HOST: postgres
+      REDIS_HOST: redis
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379
     volumes:
       - ./src:/app/src:ro
       - ./migrations:/app/migrations:ro

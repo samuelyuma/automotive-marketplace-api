@@ -1,54 +1,51 @@
 # Automotive Marketplace API
 
-## Local development
+## Local Development
 
-Copy the development configuration and start the API, PostgreSQL 18, and
-Redis 8:
+Copy the example configuration once:
 
 ```bash
 cp .env.example .env
-docker compose -f docker-compose.dev.yml up --build
 ```
 
-The API is available at `http://localhost:8080` by default. It runs in Bun
-watch mode with `src/` mounted into the container, so source changes do not
-require an image rebuild.
-
-If port 8080 is in use, change `PORT` in `.env` before starting Compose. This
-changes both the API's listening port and its published host port. If ports
-5432 or 6379 are occupied, change `POSTGRES_PORT` or `REDIS_PORT` in `.env`.
-These change only the host ports; the API still connects to `postgres:5432`
-and `redis:6379` on the Compose network.
-
-Keep `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB` consistent with
-`DATABASE_URL`. PostgreSQL uses them only when it first initializes its named
-volume; changing them later does not update existing roles or databases.
-
-Check the API and its dependencies at `http://localhost:8080/health-check` (or
-the port set in `.env`). The response reports `db` and `redis` as `up` or
-`down`. It returns HTTP 503 when either dependency is down, so Docker marks
-the API unhealthy.
-
-Stop the stack with:
+### Docker
 
 ```bash
-docker compose -f docker-compose.dev.yml down
+bun run docker:up
 ```
 
-The PostgreSQL and Redis named volumes retain data when the stack is stopped.
+This starts the API, PostgreSQL 18, and Redis 8. Run the command again after
+source changes to rebuild the compiled API. Stop everything with
+`bun run docker:down`; database and Redis data remain in Docker volumes.
+
+### Hybrid (Bun for Server, Docker for Database)
+
+```bash
+docker compose -f docker-compose.dev.yml up -d postgres redis
+bun run dev
+```
+
+If the Docker API is running, stop it first with
+`docker compose -f docker-compose.dev.yml stop api` to free the API port.
+The example `.env` uses `127.0.0.1` for host connections; Compose uses Docker
+service names. Change `PORT`, `POSTGRES_PORT`, or `REDIS_PORT` in `.env` if a
+host port is occupied.
+
+The API defaults to `http://localhost:8080`. Health status is at
+`/health-check`, interactive docs at `/docs`, and OpenAPI JSON at `/docs/json`.
 
 ## Migrations
 
 With the development stack running, apply migrations from another terminal:
 
 ```bash
-docker compose -f docker-compose.dev.yml exec api bun run migrate:up
+bun run migrate:up
 ```
 
 To revert the latest migration:
 
 ```bash
-docker compose -f docker-compose.dev.yml exec api bun run migrate:down
+bun run migrate:down
 ```
 
 Migration files live in `migrations/` as matching `.up.sql` and
