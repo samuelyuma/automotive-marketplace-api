@@ -4,6 +4,7 @@ import type { CategoryRepository } from "@application/ports/category-repository.
 import { CategoryService } from "@application/service/category.service";
 
 import type {
+  CategoryDetail,
   CategoryTreeNode,
   CategoryWithAttributes,
   UpdatedCategoryWithAttributes,
@@ -14,6 +15,10 @@ import {
   CreateCategoryModel,
   createCategoryRouteDetail,
 } from "@interface/validators/category/create-category.validator";
+import {
+  GetCategoryModel,
+  getCategoryRouteDetail,
+} from "@interface/validators/category/get-category.validator";
 import type { CategoryTreeResponseNode } from "@interface/validators/category/list-category.validator";
 import {
   ListCategoryModel,
@@ -25,6 +30,35 @@ import {
 } from "@interface/validators/category/update-category.validator";
 
 import { PgCategoryRepository } from "@repository/postgres/category.repository";
+
+function serializeCategoryDetail({ category, children }: CategoryDetail) {
+  return {
+    id: category.id,
+    parent_id: category.parent_id,
+    name: category.name,
+    slug: category.slug,
+    created_at: category.created_at.toISOString(),
+    updated_at: category.updated_at.toISOString(),
+    attributes: category.attributes.map((attribute) => ({
+      id: attribute.id,
+      category_id: attribute.category_id,
+      key: attribute.key,
+      label: attribute.label,
+      type: attribute.type,
+      options: attribute.options,
+      created_at: attribute.created_at.toISOString(),
+      updated_at: attribute.updated_at.toISOString(),
+    })),
+    children: children.map((child) => ({
+      id: child.id,
+      parent_id: child.parent_id,
+      name: child.name,
+      slug: child.slug,
+      created_at: child.created_at.toISOString(),
+      updated_at: child.updated_at.toISOString(),
+    })),
+  };
+}
 
 function serializeTree(
   categories: CategoryTreeNode[],
@@ -101,6 +135,7 @@ export function createCategoryController(
 
   return new Elysia({ prefix: "/categories" })
     .use(CreateCategoryModel)
+    .use(GetCategoryModel)
     .use(ListCategoryModel)
     .use(UpdateCategoryModel)
     .get(
@@ -116,6 +151,26 @@ export function createCategoryController(
           500: "category.internal_error",
         },
         detail: listCategoryRouteDetail,
+      },
+    )
+    .get(
+      "/:id",
+      async ({ params }) =>
+        successResponse(
+          serializeCategoryDetail(
+            await categoryService.getWithChildren(params.id),
+          ),
+          "Category retrieved",
+        ),
+      {
+        params: "category.detail.params",
+        response: {
+          200: "category.detail",
+          400: "category.bad_request",
+          404: "category.not_found",
+          500: "category.internal_error",
+        },
+        detail: getCategoryRouteDetail,
       },
     )
     .post(

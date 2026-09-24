@@ -6,6 +6,7 @@ import { diffCategoryAttributes } from "@application/utils/category-attribute-di
 import type {
   Category,
   CategoryAttribute,
+  CategoryDetail,
   CategoryWithAttributes,
   DeletedCategoryAttribute,
   NewCategory,
@@ -66,7 +67,82 @@ type CategoryHierarchyRow = {
   reachable_categories: string;
 };
 
+type CategoryDetailRow = Category & {
+  attribute_id: string | null;
+  attribute_key: string | null;
+  attribute_label: string | null;
+  attribute_type: CategoryAttribute["type"] | null;
+  attribute_options: string[] | null;
+  attribute_created_at: Date | null;
+  attribute_updated_at: Date | null;
+};
+
 export class PgCategoryRepository implements CategoryRepository {
+  async getWithChildren(id: string): Promise<CategoryDetail | null> {
+    const rows = await sql<CategoryDetailRow[]>`
+      SELECT category.id, category.parent_id, category.name, category.slug,
+             category.created_at, category.updated_at,
+             attribute.id AS attribute_id,
+             attribute.key AS attribute_key,
+             attribute.label AS attribute_label,
+             attribute.type AS attribute_type,
+             attribute.options AS attribute_options,
+             attribute.created_at AS attribute_created_at,
+             attribute.updated_at AS attribute_updated_at
+      FROM categories category
+      LEFT JOIN attribute_definitions attribute
+        ON attribute.category_id = category.id AND attribute.deleted_at IS NULL
+      WHERE category.id = ${id}
+      ORDER BY attribute.key
+    `;
+    const first = rows[0];
+    if (!first) return null;
+
+    const attributes: CategoryAttribute[] = [];
+    for (const row of rows) {
+      if (row.attribute_id === null) continue;
+      if (
+        row.attribute_key === null ||
+        row.attribute_label === null ||
+        row.attribute_type === null ||
+        row.attribute_created_at === null ||
+        row.attribute_updated_at === null
+      )
+        throw new Error("Category attribute row is incomplete");
+      attributes.push({
+        id: row.attribute_id,
+        category_id: id,
+        key: row.attribute_key,
+        label: row.attribute_label,
+        type: row.attribute_type,
+        options: row.attribute_options,
+        created_at: row.attribute_created_at,
+        updated_at: row.attribute_updated_at,
+        deleted_at: null,
+      });
+    }
+
+    const children = await sql<Category[]>`
+      SELECT id, parent_id, name, slug, created_at, updated_at
+      FROM categories
+      WHERE parent_id = ${id}
+      ORDER BY name, id
+    `;
+
+    return {
+      category: {
+        id: first.id,
+        parent_id: first.parent_id,
+        name: first.name,
+        slug: first.slug,
+        created_at: first.created_at,
+        updated_at: first.updated_at,
+        attributes,
+      },
+      children,
+    };
+  }
+
   async listHierarchy(): Promise<CategoryWithAttributes[]> {
     const rows = await sql<CategoryHierarchyRow[]>`
       WITH RECURSIVE category_tree AS (

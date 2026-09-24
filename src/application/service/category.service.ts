@@ -1,4 +1,5 @@
 import type {
+  CategoryDetail,
   CategoryTreeNode,
   CategoryWithAttributes,
   NewCategory,
@@ -18,6 +19,12 @@ export class CategoryService {
 
   async listTree(): Promise<CategoryTreeNode[]> {
     return buildCategoryTree(await this.repository.listHierarchy());
+  }
+
+  async getWithChildren(id: string): Promise<CategoryDetail> {
+    const detail = await this.repository.getWithChildren(id);
+    if (!detail) throw new CategoryNotFoundError();
+    return detail;
   }
 
   async create(data: NewCategory): Promise<CategoryWithAttributes> {

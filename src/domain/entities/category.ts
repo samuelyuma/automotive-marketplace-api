@@ -32,6 +32,11 @@ export type CategoryWithAttributes = Category & {
   attributes: CategoryAttribute[];
 };
 
+export type CategoryDetail = {
+  category: CategoryWithAttributes;
+  children: Category[];
+};
+
 export type CategoryTreeNode = CategoryWithAttributes & {
   children: CategoryTreeNode[];
 };

@@ -1,4 +1,5 @@
 import type {
+  CategoryDetail,
   CategoryWithAttributes,
   NewCategory,
   UpdateCategory,
@@ -7,6 +8,7 @@ import type {
 
 export interface CategoryRepository {
   listHierarchy(): Promise<CategoryWithAttributes[]>;
+  getWithChildren(id: string): Promise<CategoryDetail | null>;
   create(data: NewCategory): Promise<CategoryWithAttributes>;
   update(
     id: string,
