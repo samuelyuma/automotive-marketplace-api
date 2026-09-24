@@ -1,6 +1,7 @@
 import Elysia, { t } from "elysia";
 
 import {
+  CategoryAttributeKeyConflictError,
   CategoryParentNotFoundError,
   CategorySlugConflictError,
 } from "@domain/errors/category-error";
@@ -11,6 +12,10 @@ import {
   internalErrorSchema,
   successSchema,
 } from "../response.validator";
+import {
+  categoryAttributeInputSchema,
+  createdCategoryResponseSchema,
+} from "./attribute.validator";
 
 export const CreateCategoryModel = new Elysia().model({
   "category.create.body": t.Object(
@@ -18,21 +23,16 @@ export const CreateCategoryModel = new Elysia().model({
       parent_id: t.Optional(t.Nullable(t.String({ format: "uuid" }))),
       name: t.String({ minLength: 1 }),
       slug: t.String({ minLength: 1 }),
+      attributes: t.Optional(t.Array(categoryAttributeInputSchema)),
     },
     { additionalProperties: false },
   ),
-  "category.created": successSchema(
-    t.Object({
-      id: t.String({ format: "uuid" }),
-      parent_id: t.Nullable(t.String({ format: "uuid" })),
-      name: t.String(),
-      slug: t.String(),
-      created_at: t.String({ format: "date-time" }),
-      updated_at: t.String({ format: "date-time" }),
-    }),
-  ),
+  "category.created": successSchema(createdCategoryResponseSchema),
   "category.bad_request": badRequestSchema,
-  "category.slug_conflict": errorSchema(new CategorySlugConflictError()),
+  "category.conflict": t.Union([
+    errorSchema(new CategorySlugConflictError()),
+    errorSchema(new CategoryAttributeKeyConflictError()),
+  ]),
   "category.parent_not_found": errorSchema(new CategoryParentNotFoundError()),
   "category.internal_error": internalErrorSchema,
 });

@@ -1,5 +1,5 @@
 export type ListingCondition = "NEW" | "USED" | "CERTIFIED";
-export type ListingStatus = "AVAILABLE" | "PENDING" | "SOLD";
+export type ListingStatus = "AVAILABLE" | "PENDING" | "SOLD" | "REMOVED";
 export type FuelType = "PETROL" | "DIESEL" | "HYBRID" | "ELECTRIC";
 export type Transmission = "MANUAL" | "AUTOMATIC";
 

@@ -1,22 +1,40 @@
 import type {
-  Category,
+  CategoryWithAttributes,
   NewCategory,
   UpdateCategory,
+  UpdatedCategoryWithAttributes,
 } from "@domain/entities/category";
-import { CategoryNotFoundError } from "@domain/errors/category-error";
+import {
+  CategoryAttributeKeyConflictError,
+  CategoryNotFoundError,
+} from "@domain/errors/category-error";
 
 import type { CategoryRepository } from "../ports/category-repository.port";
 
 export class CategoryService {
   constructor(private readonly repository: CategoryRepository) {}
 
-  async create(data: NewCategory): Promise<Category> {
+  async create(data: NewCategory): Promise<CategoryWithAttributes> {
+    this.assertUniqueAttributeKeys(data.attributes);
     return this.repository.create(data);
   }
 
-  async update(id: string, data: UpdateCategory): Promise<Category> {
+  async update(
+    id: string,
+    data: UpdateCategory,
+  ): Promise<UpdatedCategoryWithAttributes> {
+    this.assertUniqueAttributeKeys(data.attributes);
     const category = await this.repository.update(id, data);
     if (!category) throw new CategoryNotFoundError();
     return category;
+  }
+
+  private assertUniqueAttributeKeys(
+    attributes?: NewCategory["attributes"],
+  ): void {
+    if (!attributes) return;
+    const keys = attributes.map((attribute) => attribute.key);
+    if (new Set(keys).size !== keys.length)
+      throw new CategoryAttributeKeyConflictError();
   }
 }

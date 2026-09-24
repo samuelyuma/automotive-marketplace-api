@@ -35,3 +35,12 @@ export class CategoryInvalidParentError extends DomainError {
     this.name = "CategoryInvalidParentError";
   }
 }
+
+export class CategoryAttributeKeyConflictError extends DomainError {
+  readonly kind = "conflict" as const;
+  readonly code = "CATEGORY_ATTRIBUTE_KEY_CONFLICT";
+  constructor() {
+    super("Category attribute key already exists");
+    this.name = "CategoryAttributeKeyConflictError";
+  }
+}
