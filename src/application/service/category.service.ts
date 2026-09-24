@@ -1,4 +1,5 @@
 import type {
+  CategoryTreeNode,
   CategoryWithAttributes,
   NewCategory,
   UpdateCategory,
@@ -10,9 +11,14 @@ import {
 } from "@domain/errors/category-error";
 
 import type { CategoryRepository } from "../ports/category-repository.port";
+import { buildCategoryTree } from "../utils/build-category-tree";
 
 export class CategoryService {
   constructor(private readonly repository: CategoryRepository) {}
+
+  async listTree(): Promise<CategoryTreeNode[]> {
+    return buildCategoryTree(await this.repository.listHierarchy());
+  }
 
   async create(data: NewCategory): Promise<CategoryWithAttributes> {
     this.assertUniqueAttributeKeys(data.attributes);

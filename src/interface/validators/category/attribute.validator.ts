@@ -14,14 +14,14 @@ export const categoryAttributeInputSchema = t.Object(
   { additionalProperties: false },
 );
 
-const categoryFields = {
+export const categoryFields = {
   id: t.String({ format: "uuid" }),
   parent_id: t.Nullable(t.String({ format: "uuid" })),
   name: t.String(),
   slug: t.String(),
 };
 
-const attributeFields = {
+export const attributeFields = {
   id: t.String({ format: "uuid" }),
   category_id: t.String({ format: "uuid" }),
   key: t.String(),

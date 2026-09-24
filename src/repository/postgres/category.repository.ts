@@ -48,7 +48,112 @@ function throwCategoryError(error: unknown): never {
   throw error;
 }
 
+type CategoryHierarchyRow = {
+  id: string | null;
+  parent_id: string | null;
+  name: string | null;
+  slug: string | null;
+  created_at: Date | null;
+  updated_at: Date | null;
+  attribute_id: string | null;
+  attribute_key: string | null;
+  attribute_label: string | null;
+  attribute_type: CategoryAttribute["type"] | null;
+  attribute_options: string[] | null;
+  attribute_created_at: Date | null;
+  attribute_updated_at: Date | null;
+  total_categories: string;
+  reachable_categories: string;
+};
+
 export class PgCategoryRepository implements CategoryRepository {
+  async listHierarchy(): Promise<CategoryWithAttributes[]> {
+    const rows = await sql<CategoryHierarchyRow[]>`
+      WITH RECURSIVE category_tree AS (
+        SELECT c.id, c.parent_id, c.name, c.slug, c.created_at, c.updated_at,
+               ARRAY[c.id] AS path
+        FROM categories c
+        WHERE c.parent_id IS NULL
+
+        UNION ALL
+
+        SELECT c.id, c.parent_id, c.name, c.slug, c.created_at, c.updated_at,
+               tree.path || c.id
+        FROM categories c
+        JOIN category_tree tree ON c.parent_id = tree.id
+        WHERE NOT c.id = ANY(tree.path)
+      ), counts AS (
+        SELECT (SELECT count(*) FROM categories) AS total_categories,
+               (SELECT count(*) FROM category_tree) AS reachable_categories
+      )
+      SELECT tree.id, tree.parent_id, tree.name, tree.slug,
+             tree.created_at, tree.updated_at,
+             attribute.id AS attribute_id,
+             attribute.key AS attribute_key,
+             attribute.label AS attribute_label,
+             attribute.type AS attribute_type,
+             attribute.options AS attribute_options,
+             attribute.created_at AS attribute_created_at,
+             attribute.updated_at AS attribute_updated_at,
+             counts.total_categories, counts.reachable_categories
+      FROM counts
+      LEFT JOIN category_tree tree ON true
+      LEFT JOIN attribute_definitions attribute
+        ON attribute.category_id = tree.id AND attribute.deleted_at IS NULL
+      ORDER BY tree.id, attribute.key
+    `;
+
+    const categories = new Map<string, CategoryWithAttributes>();
+    for (const row of rows) {
+      if (row.total_categories !== row.reachable_categories)
+        throw new Error("Category hierarchy contains an unreachable cycle");
+      if (row.id === null) continue;
+      if (
+        row.name === null ||
+        row.slug === null ||
+        row.created_at === null ||
+        row.updated_at === null
+      )
+        throw new Error("Category hierarchy row is incomplete");
+
+      let category = categories.get(row.id);
+      if (!category) {
+        category = {
+          id: row.id,
+          parent_id: row.parent_id,
+          name: row.name,
+          slug: row.slug,
+          created_at: row.created_at,
+          updated_at: row.updated_at,
+          attributes: [],
+        };
+        categories.set(row.id, category);
+      }
+      if (row.attribute_id !== null) {
+        if (
+          row.attribute_key === null ||
+          row.attribute_label === null ||
+          row.attribute_type === null ||
+          row.attribute_created_at === null ||
+          row.attribute_updated_at === null
+        )
+          throw new Error("Category attribute row is incomplete");
+        category.attributes.push({
+          id: row.attribute_id,
+          category_id: row.id,
+          key: row.attribute_key,
+          label: row.attribute_label,
+          type: row.attribute_type,
+          options: row.attribute_options,
+          created_at: row.attribute_created_at,
+          updated_at: row.attribute_updated_at,
+          deleted_at: null,
+        });
+      }
+    }
+    return [...categories.values()];
+  }
+
   async create(data: NewCategory): Promise<CategoryWithAttributes> {
     try {
       return await sql.begin(async (tx) => {

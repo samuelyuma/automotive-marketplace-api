@@ -32,6 +32,10 @@ export type CategoryWithAttributes = Category & {
   attributes: CategoryAttribute[];
 };
 
+export type CategoryTreeNode = CategoryWithAttributes & {
+  children: CategoryTreeNode[];
+};
+
 export type DeletedCategoryAttribute = {
   id: string;
   deleted_at: Date;

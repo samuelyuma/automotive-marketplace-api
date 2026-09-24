@@ -4,6 +4,7 @@ import type { CategoryRepository } from "@application/ports/category-repository.
 import { CategoryService } from "@application/service/category.service";
 
 import type {
+  CategoryTreeNode,
   CategoryWithAttributes,
   UpdatedCategoryWithAttributes,
 } from "@domain/entities/category";
@@ -13,12 +14,41 @@ import {
   CreateCategoryModel,
   createCategoryRouteDetail,
 } from "@interface/validators/category/create-category.validator";
+import type { CategoryTreeResponseNode } from "@interface/validators/category/list-category.validator";
+import {
+  ListCategoryModel,
+  listCategoryRouteDetail,
+} from "@interface/validators/category/list-category.validator";
 import {
   UpdateCategoryModel,
   updateCategoryRouteDetail,
 } from "@interface/validators/category/update-category.validator";
 
 import { PgCategoryRepository } from "@repository/postgres/category.repository";
+
+function serializeTree(
+  categories: CategoryTreeNode[],
+): CategoryTreeResponseNode[] {
+  return categories.map((category) => ({
+    id: category.id,
+    parent_id: category.parent_id,
+    name: category.name,
+    slug: category.slug,
+    created_at: category.created_at.toISOString(),
+    updated_at: category.updated_at.toISOString(),
+    attributes: category.attributes.map((attribute) => ({
+      id: attribute.id,
+      category_id: attribute.category_id,
+      key: attribute.key,
+      label: attribute.label,
+      type: attribute.type,
+      options: attribute.options,
+      created_at: attribute.created_at.toISOString(),
+      updated_at: attribute.updated_at.toISOString(),
+    })),
+    children: serializeTree(category.children),
+  }));
+}
 
 function serializeCreatedCategory(category: CategoryWithAttributes) {
   return {
@@ -71,7 +101,23 @@ export function createCategoryController(
 
   return new Elysia({ prefix: "/categories" })
     .use(CreateCategoryModel)
+    .use(ListCategoryModel)
     .use(UpdateCategoryModel)
+    .get(
+      "",
+      async () =>
+        successResponse(
+          serializeTree(await categoryService.listTree()),
+          "Categories retrieved",
+        ),
+      {
+        response: {
+          200: "category.tree",
+          500: "category.internal_error",
+        },
+        detail: listCategoryRouteDetail,
+      },
+    )
     .post(
       "",
       async ({ body, status }) => {
