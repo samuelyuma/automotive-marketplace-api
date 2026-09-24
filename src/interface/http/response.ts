@@ -4,6 +4,13 @@ export type SuccessResponse<T = undefined> = {
   data?: T;
 };
 
+export type PaginationMeta = {
+  per_page: number;
+  next_cursor: string | null;
+  prev_cursor?: string | null;
+  total_records?: number;
+};
+
 export type ErrorDetail = { field: string; issue: string };
 
 export type ErrorResponse = {
@@ -33,6 +40,43 @@ export const standardErrors = {
 
 export function successResponse<T>(data: T, message: string) {
   return { success: true as const, message, data };
+}
+
+export function paginatedResponse<T, F extends object>(
+  data: T[],
+  message: string,
+  meta: PaginationMeta,
+  facets: F,
+): {
+  success: true;
+  message: string;
+  data: T[];
+  meta: PaginationMeta;
+  facets: F;
+};
+export function paginatedResponse<T>(
+  data: T[],
+  message: string,
+  meta: PaginationMeta,
+): {
+  success: true;
+  message: string;
+  data: T[];
+  meta: PaginationMeta;
+};
+export function paginatedResponse<T, F extends object>(
+  data: T[],
+  message: string,
+  meta: PaginationMeta,
+  facets?: F,
+) {
+  return {
+    success: true as const,
+    message,
+    data,
+    meta,
+    ...(facets === undefined ? {} : { facets }),
+  };
 }
 
 export function errorResponse(

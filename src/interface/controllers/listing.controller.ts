@@ -2,10 +2,16 @@ import Elysia from "elysia";
 
 import type { ListingRepository } from "@application/ports/listing-repository.port";
 import { ListingService } from "@application/service/listing.service";
+import { InvalidListingCursorError } from "@application/utils/listing-cursor";
 
 import type { Listing } from "@domain/entities/listing";
 
-import { successResponse } from "@interface/http/response";
+import {
+  errorResponse,
+  paginatedResponse,
+  standardErrors,
+  successResponse,
+} from "@interface/http/response";
 import {
   CreateListingModel,
   createListingRouteDetail,
@@ -14,6 +20,10 @@ import {
   DeleteListingModel,
   deleteListingRouteDetail,
 } from "@interface/validators/listing/delete-listing.validator";
+import {
+  ListListingsModel,
+  listListingsRouteDetail,
+} from "@interface/validators/listing/list-listings.validator";
 import {
   UpdateListingModel,
   updateListingRouteDetail,
@@ -55,6 +65,14 @@ function serializeUpdatedListing(listing: Listing) {
   };
 }
 
+function serializeListedListing(listing: Listing) {
+  return {
+    ...serializeListingFields(listing),
+    created_at: listing.created_at.toISOString(),
+    updated_at: listing.updated_at.toISOString(),
+  };
+}
+
 export function createListingController(
   repository: ListingRepository = new PgListingRepository(),
 ) {
@@ -64,6 +82,46 @@ export function createListingController(
     .use(CreateListingModel)
     .use(UpdateListingModel)
     .use(DeleteListingModel)
+    .use(ListListingsModel)
+    .get(
+      "",
+      async ({ query, status }) => {
+        try {
+          const page = await listingService.list({
+            ...query,
+            sort: query.sort ?? "created_at",
+            direction: query.direction ?? "desc",
+            per_page: query.per_page ?? 20,
+          });
+          return paginatedResponse(
+            page.data.map(serializeListedListing),
+            "Listings retrieved",
+            page.meta,
+            page.facets,
+          );
+        } catch (error) {
+          if (error instanceof InvalidListingCursorError)
+            return status(
+              400,
+              errorResponse(
+                standardErrors.validation.code,
+                standardErrors.validation.message,
+                [{ field: "cursor", issue: error.message }],
+              ),
+            );
+          throw error;
+        }
+      },
+      {
+        query: "listing.list.query",
+        response: {
+          200: "listing.list",
+          400: "listing.list.bad_request",
+          500: "listing.list.internal_error",
+        },
+        detail: listListingsRouteDetail,
+      },
+    )
     .post(
       "",
       async ({ body, status }) => {

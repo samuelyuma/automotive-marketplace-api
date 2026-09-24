@@ -1,6 +1,10 @@
 import postgres from "postgres";
 
-import type { ListingRepository } from "@application/ports/listing-repository.port";
+import type {
+  ListingRepository,
+  ListingSearchQuery,
+  ListingSearchResult,
+} from "@application/ports/listing-repository.port";
 
 import type {
   Listing,
@@ -13,6 +17,7 @@ import { ListingCategoryNotFoundError } from "@domain/errors/listing-error";
 import { sql } from "@infrastructure/postgres/client";
 
 type ListingRow = Omit<Listing, "price"> & { price: string };
+type ListingPageRow = ListingRow & { cursor_value: string };
 
 function toListing(row: ListingRow): Listing {
   return { ...row, price: Number(row.price) };
@@ -29,6 +34,78 @@ function throwListingError(error: unknown): never {
 }
 
 export class PgListingRepository implements ListingRepository {
+  async list(query: ListingSearchQuery): Promise<ListingSearchResult> {
+    const filters = sql`
+      status = 'AVAILABLE'
+      AND (${query.category_id ?? null}::uuid IS NULL OR category_id = ${query.category_id ?? null}::uuid)
+      AND (${query.make ?? null}::text IS NULL OR lower(make) = lower(${query.make ?? null}::text))
+      AND (${query.model ?? null}::text IS NULL OR lower(model) = lower(${query.model ?? null}::text))
+      AND (${query.condition ?? null}::listing_conditions IS NULL OR condition = ${query.condition ?? null}::listing_conditions)
+      AND (${query.fuel_type ?? null}::fuel_types IS NULL OR fuel_type = ${query.fuel_type ?? null}::fuel_types)
+      AND (${query.transmission ?? null}::transmissions IS NULL OR transmission = ${query.transmission ?? null}::transmissions)
+      AND (${query.min_year ?? null}::smallint IS NULL OR year >= ${query.min_year ?? null}::smallint)
+      AND (${query.max_year ?? null}::smallint IS NULL OR year <= ${query.max_year ?? null}::smallint)
+      AND (${query.min_price ?? null}::bigint IS NULL OR price >= ${query.min_price ?? null}::bigint)
+      AND (${query.max_price ?? null}::bigint IS NULL OR price <= ${query.max_price ?? null}::bigint)
+      AND (${query.min_mileage ?? null}::integer IS NULL OR mileage >= ${query.min_mileage ?? null}::integer)
+      AND (${query.max_mileage ?? null}::integer IS NULL OR mileage <= ${query.max_mileage ?? null}::integer)
+      AND (${query.location ?? null}::text IS NULL OR lower(location) = lower(${query.location ?? null}::text))
+    `;
+
+    const sortColumn =
+      query.sort === "created_at"
+        ? sql`created_at`
+        : query.sort === "price"
+          ? sql`price`
+          : query.sort === "mileage"
+            ? sql`mileage`
+            : sql`year`;
+    const sortDirection = query.direction === "asc" ? sql`ASC` : sql`DESC`;
+    const comparator = query.direction === "asc" ? sql`>` : sql`<`;
+    // Bind timestamps as text so Postgres.js preserves microseconds in the cursor.
+    const cursorValue = query.cursor
+      ? query.sort === "created_at"
+        ? sql`${query.cursor.value}::text::timestamptz`
+        : query.sort === "price"
+          ? sql`${query.cursor.value}::bigint`
+          : query.sort === "mileage"
+            ? sql`${query.cursor.value}::integer`
+            : sql`${query.cursor.value}::smallint`
+      : null;
+    const cursorFilter = query.cursor
+      ? sql`AND (${sortColumn}, id) ${comparator} (${cursorValue}, ${query.cursor.id}::uuid)`
+      : sql``;
+
+    const [rows, facetRows] = await Promise.all([
+      sql<ListingPageRow[]>`
+        SELECT id, category_id, make, model, year, price, mileage,
+               condition, color, location, status, image_url, fuel_type,
+               transmission, engine_cc, created_at, updated_at,
+               ${sortColumn}::text AS cursor_value
+        FROM vehicle_listings
+        WHERE ${filters}
+          ${cursorFilter}
+        ORDER BY ${sortColumn} ${sortDirection}, id ${sortDirection}
+        LIMIT ${query.per_page + 1}
+      `,
+      sql<{ value: string; count: number }[]>`
+        SELECT make AS value, count(*)::integer AS count
+        FROM vehicle_listings
+        WHERE ${filters}
+        GROUP BY make
+        ORDER BY count DESC, value ASC
+      `,
+    ]);
+
+    return {
+      rows: rows.map(({ cursor_value, ...row }) => ({
+        listing: toListing(row),
+        cursor_value,
+      })),
+      facets: { make: facetRows },
+    };
+  }
+
   async create(data: NewListing): Promise<Listing> {
     try {
       const [listing] = await sql<ListingRow[]>`

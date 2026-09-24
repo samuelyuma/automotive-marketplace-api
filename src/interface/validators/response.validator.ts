@@ -9,6 +9,25 @@ export const successSchema = <T extends TSchema>(data: T) =>
     data,
   });
 
+export const paginationMetaSchema = t.Object({
+  per_page: t.Integer({ minimum: 1 }),
+  next_cursor: t.Nullable(t.String()),
+  prev_cursor: t.Optional(t.Nullable(t.String())),
+  total_records: t.Optional(t.Integer({ minimum: 0 })),
+});
+
+export const paginatedSuccessSchema = <D extends TSchema, F extends TSchema>(
+  data: D,
+  facets?: F,
+) =>
+  t.Object({
+    success: t.Literal(true),
+    message: t.String(),
+    data,
+    meta: paginationMetaSchema,
+    ...(facets === undefined ? {} : { facets }),
+  });
+
 export const errorSchema = (error: { code: string; message: string }) =>
   t.Object(
     {
