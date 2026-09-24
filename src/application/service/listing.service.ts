@@ -1,4 +1,9 @@
-import type { Listing, NewListing } from "@domain/entities/listing";
+import type {
+  Listing,
+  NewListing,
+  UpdateListing,
+} from "@domain/entities/listing";
+import { ListingNotFoundError } from "@domain/errors/listing-error";
 
 import type { ListingRepository } from "../ports/listing-repository.port";
 
@@ -7,5 +12,11 @@ export class ListingService {
 
   create(data: NewListing): Promise<Listing> {
     return this.repository.create(data);
+  }
+
+  async update(id: string, data: UpdateListing): Promise<Listing> {
+    const listing = await this.repository.update(id, data);
+    if (!listing) throw new ListingNotFoundError();
+    return listing;
   }
 }

@@ -8,34 +8,12 @@ import {
   internalErrorSchema,
   successSchema,
 } from "../response.validator";
-
-const conditionSchema = t.Union([
-  t.Literal("NEW"),
-  t.Literal("USED"),
-  t.Literal("CERTIFIED"),
-]);
-const fuelTypeSchema = t.Union([
-  t.Literal("PETROL"),
-  t.Literal("DIESEL"),
-  t.Literal("HYBRID"),
-  t.Literal("ELECTRIC"),
-]);
-const transmissionSchema = t.Union([
-  t.Literal("MANUAL"),
-  t.Literal("AUTOMATIC"),
-]);
-
-const listingFields = {
-  category_id: t.String({ format: "uuid" }),
-  make: t.String({ minLength: 1 }),
-  model: t.String({ minLength: 1 }),
-  year: t.Integer({ minimum: 1900, maximum: 2100 }),
-  price: t.Integer({ minimum: 0, maximum: Number.MAX_SAFE_INTEGER }),
-  mileage: t.Integer({ minimum: 0, maximum: 2147483647 }),
-  condition: conditionSchema,
-  color: t.String({ minLength: 1 }),
-  location: t.String({ minLength: 1 }),
-};
+import {
+  fuelTypeSchema,
+  listingFields,
+  listingResponseFields,
+  transmissionSchema,
+} from "./listing-fields.validator";
 
 export const CreateListingModel = new Elysia().model({
   "listing.create.body": t.Object(
@@ -52,18 +30,7 @@ export const CreateListingModel = new Elysia().model({
   ),
   "listing.created": successSchema(
     t.Object({
-      id: t.String({ format: "uuid" }),
-      ...listingFields,
-      status: t.Union([
-        t.Literal("AVAILABLE"),
-        t.Literal("PENDING"),
-        t.Literal("SOLD"),
-        t.Literal("REMOVED"),
-      ]),
-      image_url: t.Nullable(t.String()),
-      fuel_type: t.Nullable(fuelTypeSchema),
-      transmission: t.Nullable(transmissionSchema),
-      engine_cc: t.Nullable(t.Integer()),
+      ...listingResponseFields,
       created_at: t.String({ format: "date-time" }),
     }),
   ),

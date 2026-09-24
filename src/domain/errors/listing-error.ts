@@ -9,3 +9,13 @@ export class ListingCategoryNotFoundError extends DomainError {
     this.name = "ListingCategoryNotFoundError";
   }
 }
+
+export class ListingNotFoundError extends DomainError {
+  readonly kind = "not_found" as const;
+  readonly code = "LISTING_NOT_FOUND";
+
+  constructor() {
+    super("Listing does not exist");
+    this.name = "ListingNotFoundError";
+  }
+}
