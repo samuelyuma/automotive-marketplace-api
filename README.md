@@ -36,3 +36,20 @@ docker compose -f docker-compose.dev.yml down
 ```
 
 The PostgreSQL and Redis named volumes retain data when the stack is stopped.
+
+## Migrations
+
+With the development stack running, apply migrations from another terminal:
+
+```bash
+docker compose -f docker-compose.dev.yml exec api bun run migrate:up
+```
+
+To revert the latest migration:
+
+```bash
+docker compose -f docker-compose.dev.yml exec api bun run migrate:down
+```
+
+Migration files live in `migrations/` as matching `.up.sql` and
+`.down.sql` files.

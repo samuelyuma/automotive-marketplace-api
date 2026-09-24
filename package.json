@@ -3,6 +3,8 @@
   "version": "1.0.50",
   "scripts": {
     "dev": "bun run --watch src/index.ts",
+    "migrate:up": "bun src/infrastructure/database/migrate.ts up",
+    "migrate:down": "bun src/infrastructure/database/migrate.ts down",
     "lint": "biome lint .",
     "format": "biome format --write .",
     "check": "biome check --write .",
