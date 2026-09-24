@@ -2,16 +2,10 @@ import Elysia from "elysia";
 
 import type { ListingRepository } from "@application/ports/listing-repository.port";
 import { ListingService } from "@application/service/listing.service";
-import { InvalidListingCursorError } from "@application/utils/listing-cursor";
 
 import type { Listing } from "@domain/entities/listing";
 
-import {
-  errorResponse,
-  paginatedResponse,
-  standardErrors,
-  successResponse,
-} from "@interface/http/response";
+import { paginatedResponse, successResponse } from "@interface/http/response";
 import {
   CreateListingModel,
   createListingRouteDetail,
@@ -90,32 +84,19 @@ export function createListingController(
     .use(GetListingModel)
     .get(
       "",
-      async ({ query, status }) => {
-        try {
-          const page = await listingService.list({
-            ...query,
-            sort: query.sort ?? "created_at",
-            direction: query.direction ?? "desc",
-            per_page: query.per_page ?? 20,
-          });
-          return paginatedResponse(
-            page.data.map(serializeListingDetail),
-            "Listings retrieved",
-            page.meta,
-            page.facets,
-          );
-        } catch (error) {
-          if (error instanceof InvalidListingCursorError)
-            return status(
-              400,
-              errorResponse(
-                standardErrors.validation.code,
-                standardErrors.validation.message,
-                [{ field: "cursor", issue: error.message }],
-              ),
-            );
-          throw error;
-        }
+      async ({ query }) => {
+        const page = await listingService.list({
+          ...query,
+          sort: query.sort ?? "created_at",
+          direction: query.direction ?? "desc",
+          per_page: query.per_page ?? 20,
+        });
+        return paginatedResponse(
+          page.data.map(serializeListingDetail),
+          "Listings retrieved",
+          page.meta,
+          page.facets,
+        );
       },
       {
         query: "listing.list.query",

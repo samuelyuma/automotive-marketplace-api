@@ -31,7 +31,7 @@ export class CategoryInvalidParentError extends DomainError {
   readonly kind = "invalid" as const;
   readonly code = "CATEGORY_INVALID_PARENT";
   constructor() {
-    super("Category cannot be its own parent");
+    super("Category cannot be its own parent or descendant");
     this.name = "CategoryInvalidParentError";
   }
 }

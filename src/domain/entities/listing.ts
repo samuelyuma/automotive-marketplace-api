@@ -39,7 +39,9 @@ export type NewListing = Omit<
   >;
 
 export type UpdateListing = Partial<
-  Omit<Listing, "id" | "created_at" | "updated_at">
+  Omit<Listing, "id" | "created_at" | "updated_at" | "status"> & {
+    status: Exclude<ListingStatus, "REMOVED">;
+  }
 >;
 
 export type SoftDeletedListing = Pick<Listing, "id" | "updated_at"> & {

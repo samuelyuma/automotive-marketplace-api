@@ -10,7 +10,6 @@ import {
   fuelTypeSchema,
   listingFields,
   listingResponseFields,
-  statusSchema,
   transmissionSchema,
 } from "./listing-fields.validator";
 
@@ -27,7 +26,13 @@ export const UpdateListingModel = new Elysia().model({
       condition: t.Optional(listingFields.condition),
       color: t.Optional(listingFields.color),
       location: t.Optional(listingFields.location),
-      status: t.Optional(statusSchema),
+      status: t.Optional(
+        t.Union([
+          t.Literal("AVAILABLE"),
+          t.Literal("PENDING"),
+          t.Literal("SOLD"),
+        ]),
+      ),
       image_url: t.Optional(t.Nullable(t.String())),
       fuel_type: t.Optional(t.Nullable(fuelTypeSchema)),
       transmission: t.Optional(t.Nullable(transmissionSchema)),

@@ -1,12 +1,20 @@
+import { DomainError } from "@domain/errors/domain-error";
+
 import type {
   ListingCursor,
   ListingDirection,
   ListingSort,
 } from "../ports/listing-repository.port";
 
-export class InvalidListingCursorError extends Error {
+export class InvalidListingCursorError extends DomainError {
+  readonly kind = "bad_request" as const;
+  readonly code = "VALIDATION_ERROR";
+  override readonly details = [
+    { field: "cursor", issue: "Invalid listing cursor" },
+  ];
+
   constructor() {
-    super("Invalid listing cursor");
+    super("Request validation failed");
     this.name = "InvalidListingCursorError";
   }
 }

@@ -23,15 +23,16 @@ const EnvSchema = t.Object({
 type Env = typeof EnvSchema.static;
 
 function loadEnv(): Env {
-  if (!Value.Check(EnvSchema, process.env)) {
-    const errors = [...Value.Errors(EnvSchema, process.env)];
+  const input = Value.Default(EnvSchema, { ...process.env });
+  if (!Value.Check(EnvSchema, input)) {
+    const errors = [...Value.Errors(EnvSchema, input)];
     console.error(
       "✗ Invalid environment configuration:\n" +
         errors.map((e) => `  - ${e.path}: ${e.message}`).join("\n"),
     );
     process.exit(1);
   }
-  return Value.Cast(EnvSchema, process.env);
+  return Value.Decode(EnvSchema, input);
 }
 
 export const env = loadEnv();

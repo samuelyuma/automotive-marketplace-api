@@ -159,7 +159,7 @@ export class PgListingRepository implements ListingRepository {
             transmission = CASE WHEN ${data.transmission !== undefined} THEN ${data.transmission ?? null}::transmissions ELSE transmission END,
             engine_cc = CASE WHEN ${data.engine_cc !== undefined} THEN ${data.engine_cc ?? null}::integer ELSE engine_cc END,
             updated_at = now()
-        WHERE id = ${id}
+        WHERE id = ${id} AND status <> 'REMOVED'
         RETURNING id, category_id, make, model, year, price, mileage,
                   condition, color, location, status, image_url, fuel_type,
                   transmission, engine_cc, created_at, updated_at

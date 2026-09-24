@@ -12,6 +12,7 @@ const statusByKind = {
   not_found: 404,
   conflict: 409,
   invalid: 422,
+  bad_request: 400,
 } as const satisfies Record<ErrorKind, number>;
 
 export const errorHandler = new Elysia({ name: "error-handler" })
@@ -45,7 +46,10 @@ export const errorHandler = new Elysia({ name: "error-handler" })
           { ...base, http_status: mapped, error_code: error.code },
           error.message,
         );
-        return status(mapped, errorResponse(error.code, error.message));
+        return status(
+          mapped,
+          errorResponse(error.code, error.message, error.details),
+        );
       }
 
       if (code === "VALIDATION") {

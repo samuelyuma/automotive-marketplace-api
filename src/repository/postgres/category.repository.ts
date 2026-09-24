@@ -265,6 +265,20 @@ export class PgCategoryRepository implements CategoryRepository {
   ): Promise<UpdatedCategoryWithAttributes | null> {
     try {
       return await sql.begin(async (tx) => {
+        if (typeof data.parent_id === "string") {
+          // Serialize parent moves so two concurrent updates cannot create a cycle.
+          await tx`SELECT pg_advisory_xact_lock(724331, 1)`;
+          const [cycle] = await tx`
+            WITH RECURSIVE descendants AS (
+              SELECT id FROM categories WHERE id = ${id}
+              UNION
+              SELECT c.id FROM categories c
+              JOIN descendants d ON c.parent_id = d.id
+            )
+            SELECT 1 FROM descendants WHERE id = ${data.parent_id}::uuid
+          `;
+          if (cycle) throw new CategoryInvalidParentError();
+        }
         const [category] = await tx<Category[]>`
           UPDATE categories
           SET parent_id = CASE WHEN ${data.parent_id !== undefined} THEN ${data.parent_id ?? null}::uuid ELSE parent_id END,
