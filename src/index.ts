@@ -1,7 +1,23 @@
-import { Elysia } from "elysia";
+import { createServer } from "@main/server";
 
-const app = new Elysia().get("/", () => "Hello Elysia").listen(3000);
+async function start() {
+  try {
+    const server = createServer();
 
-console.log(
-  `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`,
-);
+    console.log(
+      `🚀 Server running at ${server.server?.hostname}:${server.server?.port}`,
+    );
+
+    const shutdown = async () => {
+      process.exit(0);
+    };
+
+    process.on("SIGTERM", shutdown);
+    process.on("SIGINT", shutdown);
+  } catch (error) {
+    console.log("🚨 Failed to start server", { error });
+    process.exit(1);
+  }
+}
+
+start();

@@ -37,13 +37,27 @@
           "level": "on",
           "options": {
             "groups": [
-              [":URL:"],
-              ":BLANK_LINE:",
               [":BUN:", ":NODE:"],
               ":BLANK_LINE:",
-              [":PACKAGE:", ":PACKAGE_WITH_PROTOCOL:"],
+              [
+                ":PACKAGE:",
+                ":PACKAGE_WITH_PROTOCOL:",
+                ":URL:",
+                "!@domain/**",
+                "!@application/**",
+                "!@infrastructure/**",
+                "!@interface/**",
+                "!@main/**"
+              ],
               ":BLANK_LINE:",
-              [":ALIAS:"],
+              [
+                "@application/**",
+                "@domain/**",
+                "@infrastructure/**",
+                "@interface/**",
+                "@main/**",
+                ":ALIAS:"
+              ],
               ":BLANK_LINE:",
               [":PATH:"]
             ]
