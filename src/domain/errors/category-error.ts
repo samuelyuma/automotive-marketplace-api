@@ -17,3 +17,21 @@ export class CategoryParentNotFoundError extends DomainError {
     this.name = "CategoryParentNotFoundError";
   }
 }
+
+export class CategoryNotFoundError extends DomainError {
+  readonly kind = "not_found" as const;
+  readonly code = "CATEGORY_NOT_FOUND";
+  constructor() {
+    super("Category does not exist");
+    this.name = "CategoryNotFoundError";
+  }
+}
+
+export class CategoryInvalidParentError extends DomainError {
+  readonly kind = "invalid" as const;
+  readonly code = "CATEGORY_INVALID_PARENT";
+  constructor() {
+    super("Category cannot be its own parent");
+    this.name = "CategoryInvalidParentError";
+  }
+}

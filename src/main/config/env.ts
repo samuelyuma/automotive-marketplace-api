@@ -2,9 +2,10 @@ import { Value } from "@sinclair/typebox/value";
 import { t } from "elysia";
 
 const EnvSchema = t.Object({
-  NODE_ENV: t.Union([t.Literal("development"), t.Literal("production")], {
-    default: "development",
-  }),
+  NODE_ENV: t.Union(
+    [t.Literal("development"), t.Literal("production"), t.Literal("test")],
+    { default: "development" },
+  ),
   PORT: t.Numeric({ default: 8080 }),
   LOG_LEVEL: t.Union(
     [
