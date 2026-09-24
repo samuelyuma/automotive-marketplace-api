@@ -1,21 +1,30 @@
+import { redis } from "@infrastructure/cache/redis-client";
+import { sql } from "@infrastructure/database/client";
+import { logger } from "@infrastructure/logging/logger";
+import { initDependencies } from "@main/dependencies";
 import { createServer } from "@main/server";
 
 async function start() {
+  await initDependencies();
+
   try {
     const server = createServer();
-
-    console.log(
-      `🚀 Server running at ${server.server?.hostname}:${server.server?.port}`,
+    logger.info(
+      { hostname: server.server?.hostname, port: server.server?.port },
+      "🚀 Server running",
     );
 
     const shutdown = async () => {
+      logger.info({}, "shutting down");
+      await sql.end();
+      await redis.quit();
       process.exit(0);
     };
 
     process.on("SIGTERM", shutdown);
     process.on("SIGINT", shutdown);
   } catch (error) {
-    console.log("🚨 Failed to start server", { error });
+    logger.error({ exception: error }, "🚨 Failed to start server");
     process.exit(1);
   }
 }

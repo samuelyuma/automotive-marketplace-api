@@ -15,6 +15,8 @@ const EnvSchema = t.Object({
     ],
     { default: "info" },
   ),
+  DATABASE_URL: t.String({ minLength: 1 }),
+  REDIS_URL: t.String({ minLength: 1, default: "redis://localhost:6379" }),
 });
 
 type Env = typeof EnvSchema.static;
