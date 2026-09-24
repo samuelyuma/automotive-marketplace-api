@@ -9,13 +9,13 @@ import {
   successSchema,
 } from "../response.validator";
 
-const countSchema = t.Array(
+export const filterCountSchema = t.Array(
   t.Object({
     value: t.String(),
     count: t.Integer({ minimum: 0 }),
   }),
 );
-const rangeSchema = t.Object({
+export const filterRangeSchema = t.Object({
   min: t.Nullable(t.Number()),
   max: t.Nullable(t.Number()),
 });
@@ -33,12 +33,12 @@ export const GetCategoryFiltersModel = new Elysia().model({
   "filter.category": successSchema(
     t.Object({
       category_id: t.String({ format: "uuid" }),
-      condition: countSchema,
-      fuel_type: countSchema,
-      transmission: countSchema,
-      price: rangeSchema,
-      year: rangeSchema,
-      mileage: rangeSchema,
+      condition: filterCountSchema,
+      fuel_type: filterCountSchema,
+      transmission: filterCountSchema,
+      price: filterRangeSchema,
+      year: filterRangeSchema,
+      mileage: filterRangeSchema,
       attributes: t.Array(
         t.Union([
           t.Object({
@@ -49,7 +49,7 @@ export const GetCategoryFiltersModel = new Elysia().model({
           t.Object({
             ...attributeBase,
             type: t.Literal("RANGE"),
-            range: rangeSchema,
+            range: filterRangeSchema,
           }),
           t.Object({ ...attributeBase, type: t.Literal("BOOLEAN") }),
         ]),

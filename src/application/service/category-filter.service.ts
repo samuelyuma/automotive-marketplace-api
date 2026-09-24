@@ -17,6 +17,17 @@ function includeUnused(values: string[], counts: FilterCount[]): FilterCount[] {
   return values.map((value) => ({ value, count: byValue.get(value) ?? 0 }));
 }
 
+function fixedFilters(stats: CategoryFilterStats) {
+  return {
+    condition: includeUnused(conditionValues, stats.condition),
+    fuel_type: includeUnused(fuelTypeValues, stats.fuel_type),
+    transmission: includeUnused(transmissionValues, stats.transmission),
+    price: stats.price,
+    year: stats.year,
+    mileage: stats.mileage,
+  };
+}
+
 function serializeAttribute(
   attribute: CategoryAttribute,
   stats: CategoryFilterStats,
@@ -47,18 +58,17 @@ export class CategoryFilterService {
     private readonly filters: CategoryFilterRepository,
   ) {}
 
+  async getGlobal() {
+    return fixedFilters(await this.filters.getGlobal());
+  }
+
   async getForCategory(categoryId: string) {
     const detail = await this.categories.getWithChildren(categoryId);
     if (!detail) throw new CategoryNotFoundError();
     const stats = await this.filters.getForCategory(categoryId);
     return {
       category_id: categoryId,
-      condition: includeUnused(conditionValues, stats.condition),
-      fuel_type: includeUnused(fuelTypeValues, stats.fuel_type),
-      transmission: includeUnused(transmissionValues, stats.transmission),
-      price: stats.price,
-      year: stats.year,
-      mileage: stats.mileage,
+      ...fixedFilters(stats),
       attributes: detail.category.attributes.map((attribute) =>
         serializeAttribute(attribute, stats),
       ),

@@ -12,5 +12,6 @@ export type CategoryFilterStats = {
 };
 
 export interface CategoryFilterRepository {
+  getGlobal(): Promise<CategoryFilterStats>;
   getForCategory(categoryId: string): Promise<CategoryFilterStats>;
 }

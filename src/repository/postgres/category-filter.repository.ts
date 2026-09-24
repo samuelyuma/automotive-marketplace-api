@@ -23,13 +23,23 @@ type StatsRow = {
 };
 
 export class PgCategoryFilterRepository implements CategoryFilterRepository {
-  async getForCategory(categoryId: string): Promise<CategoryFilterStats> {
+  getGlobal(): Promise<CategoryFilterStats> {
+    return this.getStats(null);
+  }
+
+  getForCategory(categoryId: string): Promise<CategoryFilterStats> {
+    return this.getStats(categoryId);
+  }
+
+  private async getStats(
+    categoryId: string | null,
+  ): Promise<CategoryFilterStats> {
     const [row] = await sql<StatsRow[]>`
       WITH available AS (
         SELECT condition, fuel_type, transmission, price, year, mileage, engine_cc
         FROM vehicle_listings
         WHERE status = 'AVAILABLE'
-          AND category_id IN (${categoryScopeIds(categoryId)})
+          ${categoryId ? sql`AND category_id IN (${categoryScopeIds(categoryId)})` : sql``}
       )
       SELECT
         COALESCE((SELECT jsonb_agg(to_jsonb(c)) FROM (
