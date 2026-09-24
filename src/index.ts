@@ -1,6 +1,7 @@
 import { logger } from "@infrastructure/logging/logger";
 import { sql } from "@infrastructure/postgres/client";
 import { redis } from "@infrastructure/redis/client";
+
 import { initDependencies } from "@main/dependencies";
 import { createServer } from "@main/server";
 

@@ -19,11 +19,12 @@
     "noImplicitOverride": true,
 
     "paths": {
-      "@domain/*": ["./src/domain/*"],
       "@application/*": ["./src/application/*"],
+      "@domain/*": ["./src/domain/*"],
       "@infrastructure/*": ["./src/infrastructure/*"],
       "@interface/*": ["./src/interface/*"],
-      "@main/*": ["./src/main/*"]
+      "@main/*": ["./src/main/*"],
+      "@repository/*": ["./src/repository/*"],
     }
   },
   "include": ["src", "index.ts"]

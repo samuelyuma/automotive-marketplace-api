@@ -12,6 +12,25 @@ export type ErrorResponse = {
   error: { code: string; details?: ErrorDetail[] };
 };
 
+export const standardErrors = {
+  validation: {
+    code: "VALIDATION_ERROR",
+    message: "Request validation failed",
+  },
+  parse: {
+    code: "PARSE_ERROR",
+    message: "Malformed request body",
+  },
+  notFound: {
+    code: "NOT_FOUND",
+    message: "Route not found",
+  },
+  internal: {
+    code: "INTERNAL_SERVER_ERROR",
+    message: "Something went wrong",
+  },
+} as const;
+
 export function successResponse<T>(data: T, message: string) {
   return { success: true as const, message, data };
 }

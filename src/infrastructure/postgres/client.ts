@@ -1,6 +1,7 @@
 import postgres from "postgres";
 
 import { logger } from "@infrastructure/logging/logger";
+
 import { env } from "@main/config/env";
 
 const dbLogger = logger.child({ module: "database" });

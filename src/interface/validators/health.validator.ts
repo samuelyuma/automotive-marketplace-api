@@ -34,8 +34,7 @@ export const HealthModel = new Elysia().model({
 
 export const healthRouteDetail = {
   summary: "Check Application Health",
-  description:
-    "Checks PostgreSQL and Redis connectivity. Returns 503 if either dependency is unavailable.",
+  description: "Checks PostgreSQL and Redis connectivity.",
   tags: ["Health"],
 };
 

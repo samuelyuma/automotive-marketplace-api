@@ -4,7 +4,7 @@ import { DomainError, type ErrorKind } from "@domain/errors/domain-error";
 
 import { logger } from "@infrastructure/logging/logger";
 
-import { errorResponse } from "@interface/http/response";
+import { errorResponse, standardErrors } from "@interface/http/response";
 
 import { requestContext } from "./request-context.middlware";
 
@@ -35,7 +35,10 @@ export const errorHandler = new Elysia({ name: "error-handler" })
           );
           return status(
             500,
-            errorResponse("INTERNAL_SERVER_ERROR", "Something went wrong"),
+            errorResponse(
+              standardErrors.internal.code,
+              standardErrors.internal.message,
+            ),
           );
         }
         logger.warn(
@@ -53,15 +56,30 @@ export const errorHandler = new Elysia({ name: "error-handler" })
         return status(
           400,
           errorResponse(
-            "VALIDATION_ERROR",
-            "Request validation failed",
+            standardErrors.validation.code,
+            standardErrors.validation.message,
             details,
           ),
         );
       }
 
+      if (code === "PARSE")
+        return status(
+          400,
+          errorResponse(
+            standardErrors.parse.code,
+            standardErrors.parse.message,
+          ),
+        );
+
       if (code === "NOT_FOUND")
-        return status(404, errorResponse("NOT_FOUND", "Route not found"));
+        return status(
+          404,
+          errorResponse(
+            standardErrors.notFound.code,
+            standardErrors.notFound.message,
+          ),
+        );
 
       logger.error(
         { ...base, http_status: 500, exception: error },
@@ -69,7 +87,10 @@ export const errorHandler = new Elysia({ name: "error-handler" })
       );
       return status(
         500,
-        errorResponse("INTERNAL_SERVER_ERROR", "Something went wrong"),
+        errorResponse(
+          standardErrors.internal.code,
+          standardErrors.internal.message,
+        ),
       );
     },
   );

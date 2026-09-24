@@ -2,6 +2,7 @@ import { Elysia } from "elysia";
 
 import { checkDatabaseHealth } from "@infrastructure/postgres/health";
 import { checkRedisHealth } from "@infrastructure/redis/health";
+
 import {
   HealthModel,
   type HealthResponse,
