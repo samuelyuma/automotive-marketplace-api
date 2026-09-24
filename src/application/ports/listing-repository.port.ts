@@ -7,6 +7,7 @@ import type {
 
 export interface ListingRepository {
   list(query: ListingSearchQuery): Promise<ListingSearchResult>;
+  getById(id: string): Promise<Listing | null>;
   create(data: NewListing): Promise<Listing>;
   update(id: string, data: UpdateListing): Promise<Listing | null>;
   softDelete(id: string): Promise<SoftDeletedListing | null>;

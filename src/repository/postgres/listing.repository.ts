@@ -34,6 +34,17 @@ function throwListingError(error: unknown): never {
 }
 
 export class PgListingRepository implements ListingRepository {
+  async getById(id: string): Promise<Listing | null> {
+    const [listing] = await sql<ListingRow[]>`
+      SELECT id, category_id, make, model, year, price, mileage,
+             condition, color, location, status, image_url, fuel_type,
+             transmission, engine_cc, created_at, updated_at
+      FROM vehicle_listings
+      WHERE id = ${id} AND status <> 'REMOVED'
+    `;
+    return listing ? toListing(listing) : null;
+  }
+
   async list(query: ListingSearchQuery): Promise<ListingSearchResult> {
     const filters = sql`
       status = 'AVAILABLE'

@@ -55,6 +55,12 @@ export class ListingService {
     };
   }
 
+  async getById(id: string): Promise<Listing> {
+    const listing = await this.repository.getById(id);
+    if (!listing) throw new ListingNotFoundError();
+    return listing;
+  }
+
   create(data: NewListing): Promise<Listing> {
     return this.repository.create(data);
   }

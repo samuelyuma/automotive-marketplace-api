@@ -21,6 +21,10 @@ import {
   deleteListingRouteDetail,
 } from "@interface/validators/listing/delete-listing.validator";
 import {
+  GetListingModel,
+  getListingRouteDetail,
+} from "@interface/validators/listing/get-listing.validator";
+import {
   ListListingsModel,
   listListingsRouteDetail,
 } from "@interface/validators/listing/list-listings.validator";
@@ -65,7 +69,7 @@ function serializeUpdatedListing(listing: Listing) {
   };
 }
 
-function serializeListedListing(listing: Listing) {
+function serializeListingDetail(listing: Listing) {
   return {
     ...serializeListingFields(listing),
     created_at: listing.created_at.toISOString(),
@@ -83,6 +87,7 @@ export function createListingController(
     .use(UpdateListingModel)
     .use(DeleteListingModel)
     .use(ListListingsModel)
+    .use(GetListingModel)
     .get(
       "",
       async ({ query, status }) => {
@@ -94,7 +99,7 @@ export function createListingController(
             per_page: query.per_page ?? 20,
           });
           return paginatedResponse(
-            page.data.map(serializeListedListing),
+            page.data.map(serializeListingDetail),
             "Listings retrieved",
             page.meta,
             page.facets,
@@ -120,6 +125,24 @@ export function createListingController(
           500: "listing.list.internal_error",
         },
         detail: listListingsRouteDetail,
+      },
+    )
+    .get(
+      "/:id",
+      async ({ params }) =>
+        successResponse(
+          serializeListingDetail(await listingService.getById(params.id)),
+          "Listing retrieved",
+        ),
+      {
+        params: "listing.detail.params",
+        response: {
+          200: "listing.detail",
+          400: "listing.detail.bad_request",
+          404: "listing.detail.not_found",
+          500: "listing.detail.internal_error",
+        },
+        detail: getListingRouteDetail,
       },
     )
     .post(
