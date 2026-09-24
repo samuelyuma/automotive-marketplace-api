@@ -6,7 +6,6 @@ export type Transmission = "MANUAL" | "AUTOMATIC";
 export type Listing = {
   id: string;
   category_id: string;
-  seller_id: string;
   make: string;
   model: string;
   year: number;
@@ -26,9 +25,19 @@ export type Listing = {
 
 export type NewListing = Omit<
   Listing,
-  "id" | "status" | "created_at" | "updated_at"
->;
+  | "id"
+  | "status"
+  | "image_url"
+  | "fuel_type"
+  | "transmission"
+  | "engine_cc"
+  | "created_at"
+  | "updated_at"
+> &
+  Partial<
+    Pick<Listing, "image_url" | "fuel_type" | "transmission" | "engine_cc">
+  >;
 
 export type UpdateListing = Partial<
-  Omit<Listing, "id" | "seller_id" | "created_at" | "updated_at">
+  Omit<Listing, "id" | "created_at" | "updated_at">
 >;
