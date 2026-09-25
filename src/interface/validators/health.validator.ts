@@ -9,7 +9,8 @@ const healthFields = {
 
 export const HealthModel = new Elysia().model({
   "health.ok": t.Object(healthFields, {
-    description: "Application and dependencies are healthy",
+    description:
+      "Application and database are healthy; Redis status is reported separately",
     examples: [
       {
         app: "ok",
@@ -20,7 +21,7 @@ export const HealthModel = new Elysia().model({
     ],
   }),
   "health.unavailable": t.Object(healthFields, {
-    description: "A dependency is unavailable",
+    description: "The database is unavailable",
     examples: [
       {
         app: "ok",

@@ -1,10 +1,13 @@
 import Elysia from "elysia";
 
+import type { CachePort } from "../../application/ports/cache.port";
 import type { CategoryRepository } from "../../application/ports/category-repository.port";
 import type { FilterRepository } from "../../application/ports/filter-repository.port";
 import { FilterService } from "../../application/service/filter.service";
+import { RedisCache } from "../../infrastructure/redis/cache";
 import { PgCategoryRepository } from "../../repository/postgres/category.repository";
 import { PgFilterRepository } from "../../repository/postgres/filter.repository";
+import { cachedRead } from "../http/read-cache";
 import {
   errorResponse,
   standardErrors,
@@ -28,6 +31,7 @@ function unknownQueryError(request: Request) {
 export function createFilterController(
   categoryRepository: CategoryRepository = new PgCategoryRepository(),
   filterRepository: FilterRepository = new PgFilterRepository(),
+  cache?: CachePort,
 ) {
   const service = new FilterService(categoryRepository, filterRepository);
   return new Elysia({ prefix: "/filters" })
@@ -37,7 +41,9 @@ export function createFilterController(
       async ({ request, status }) => {
         const error = unknownQueryError(request);
         if (error) return status(400, error);
-        return successResponse(await service.getGlobal(), "Filters retrieved");
+        return cachedRead(cache, request, async () =>
+          successResponse(await service.getGlobal(), "Filters retrieved"),
+        );
       },
       {
         query: "filter.list.query",
@@ -54,9 +60,11 @@ export function createFilterController(
       async ({ params, request, status }) => {
         const error = unknownQueryError(request);
         if (error) return status(400, error);
-        return successResponse(
-          await service.getForCategory(params.categoryId),
-          "Category filters retrieved",
+        return cachedRead(cache, request, async () =>
+          successResponse(
+            await service.getForCategory(params.categoryId),
+            "Category filters retrieved",
+          ),
         );
       },
       {
@@ -73,4 +81,8 @@ export function createFilterController(
     );
 }
 
-export const filterController = createFilterController();
+export const filterController = createFilterController(
+  undefined,
+  undefined,
+  new RedisCache(),
+);

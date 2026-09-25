@@ -1,12 +1,15 @@
 import Elysia from "elysia";
 
+import type { CachePort } from "../../application/ports/cache.port";
 import type { ListingRepository } from "../../application/ports/listing-repository.port";
 import type { ListingSearchRepository } from "../../application/ports/listing-search-repository.port";
 import { ListingService } from "../../application/service/listing.service";
 import { ListingSearchService } from "../../application/service/listing-search.service";
 import type { Listing } from "../../domain/entities/listing";
+import { RedisCache } from "../../infrastructure/redis/cache";
 import { PgListingRepository } from "../../repository/postgres/listing.repository";
 import { PgListingSearchRepository } from "../../repository/postgres/listing-search.repository";
+import { cachedRead, invalidateReadCache } from "../http/read-cache";
 import { paginatedResponse, successResponse } from "../http/response";
 import { serializeListingDetail } from "../http/serialize-listing-detail";
 import {
@@ -67,8 +70,9 @@ function serializeUpdatedListing(listing: Listing) {
 export function createListingController(
   repository: ListingRepository = new PgListingRepository(),
   searchRepository: ListingSearchRepository = new PgListingSearchRepository(),
+  cache?: CachePort,
 ) {
-  const listingService = new ListingService(repository);
+  const listingService = new ListingService(repository, cache);
   const searchService = new ListingSearchService(searchRepository);
 
   return new Elysia({ prefix: "/listings" })
@@ -79,20 +83,21 @@ export function createListingController(
     .use(GetListingModel)
     .get(
       "",
-      async ({ query }) => {
-        const page = await searchService.list({
-          ...query,
-          sort: query.sort ?? "created_at",
-          direction: query.direction ?? "desc",
-          per_page: query.per_page ?? 20,
-        });
-        return paginatedResponse(
-          page.data.map(serializeListingDetail),
-          "Listings retrieved",
-          page.meta,
-          page.facets,
-        );
-      },
+      async ({ query, request }) =>
+        cachedRead(cache, request, async () => {
+          const page = await searchService.list({
+            ...query,
+            sort: query.sort ?? "created_at",
+            direction: query.direction ?? "desc",
+            per_page: query.per_page ?? 20,
+          });
+          return paginatedResponse(
+            page.data.map(serializeListingDetail),
+            "Listings retrieved",
+            page.meta,
+            page.facets,
+          );
+        }),
       {
         query: "listing.list.query",
         response: {
@@ -125,6 +130,7 @@ export function createListingController(
       "",
       async ({ body, status }) => {
         const listing = await listingService.create(body);
+        await invalidateReadCache(cache);
         return status(
           201,
           successResponse(serializeCreatedListing(listing), "Listing created"),
@@ -143,11 +149,14 @@ export function createListingController(
     )
     .patch(
       "/:id",
-      async ({ params, body }) =>
-        successResponse(
-          serializeUpdatedListing(await listingService.update(params.id, body)),
+      async ({ params, body }) => {
+        const listing = await listingService.update(params.id, body);
+        await invalidateReadCache(cache);
+        return successResponse(
+          serializeUpdatedListing(listing),
           "Listing updated",
-        ),
+        );
+      },
       {
         params: "listing.update.params",
         body: "listing.update.body",
@@ -165,6 +174,7 @@ export function createListingController(
       "/:id",
       async ({ params }) => {
         const listing = await listingService.softDelete(params.id);
+        await invalidateReadCache(cache);
         return successResponse(
           {
             id: listing.id,
@@ -187,4 +197,8 @@ export function createListingController(
     );
 }
 
-export const listingController = createListingController();
+export const listingController = createListingController(
+  undefined,
+  undefined,
+  new RedisCache(),
+);

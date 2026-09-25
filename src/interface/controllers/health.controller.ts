@@ -23,7 +23,7 @@ export const healthController = new Elysia().use(HealthModel).get(
       timestamp: new Date().toISOString(),
     };
 
-    return dbHealthy && redisHealthy ? health : status(503, health);
+    return dbHealthy ? health : status(503, health);
   },
   {
     detail: healthRouteDetail,

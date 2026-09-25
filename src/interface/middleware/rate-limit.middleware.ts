@@ -36,14 +36,7 @@ export function createRateLimitPlugin({
         );
         return status(429, errorResponse("RATE_LIMITED", "Too many requests"));
       } catch (error) {
-        logger.error({ exception: error }, "rate limiter unavailable");
-        return status(
-          503,
-          errorResponse(
-            "RATE_LIMIT_UNAVAILABLE",
-            "Service temporarily unavailable",
-          ),
-        );
+        logger.warn({ exception: error }, "rate limiter unavailable");
       }
     })
     .as("global");

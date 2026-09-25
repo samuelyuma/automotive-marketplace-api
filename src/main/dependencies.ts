@@ -18,7 +18,9 @@ export async function initDependencies(): Promise<void> {
       throw new Error("Redis ping failed after connect");
     logger.info({}, "✅ Redis connected");
   } catch (error) {
-    logger.error({ exception: error }, "🚨 Redis connection failed");
-    process.exit(1);
+    logger.warn(
+      { exception: error },
+      "Redis unavailable; continuing without cache",
+    );
   }
 }

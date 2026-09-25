@@ -1,5 +1,6 @@
 import Elysia from "elysia";
 
+import type { CachePort } from "../../application/ports/cache.port";
 import type { CategoryRepository } from "../../application/ports/category-repository.port";
 import type { ListingSearchRepository } from "../../application/ports/listing-search-repository.port";
 import { CategoryService } from "../../application/service/category.service";
@@ -10,8 +11,10 @@ import type {
   CategoryWithAttributes,
   UpdatedCategoryWithAttributes,
 } from "../../domain/entities/category";
+import { RedisCache } from "../../infrastructure/redis/cache";
 import { PgCategoryRepository } from "../../repository/postgres/category.repository";
 import { PgListingSearchRepository } from "../../repository/postgres/listing-search.repository";
+import { cachedRead, invalidateReadCache } from "../http/read-cache";
 import { paginatedResponse, successResponse } from "../http/response";
 import { serializeListingDetail } from "../http/serialize-listing-detail";
 import {
@@ -136,6 +139,7 @@ function serializeUpdatedCategory(category: UpdatedCategoryWithAttributes) {
 export function createCategoryController(
   repository: CategoryRepository = new PgCategoryRepository(),
   listingRepository: ListingSearchRepository = new PgListingSearchRepository(),
+  cache?: CachePort,
 ) {
   const categoryService = new CategoryService(repository);
   const listingSearchService = new ListingSearchService(listingRepository);
@@ -148,10 +152,12 @@ export function createCategoryController(
     .use(ListListingsModel)
     .get(
       "",
-      async () =>
-        successResponse(
-          serializeTree(await categoryService.listTree()),
-          "Categories retrieved",
+      async ({ request }) =>
+        cachedRead(cache, request, async () =>
+          successResponse(
+            serializeTree(await categoryService.listTree()),
+            "Categories retrieved",
+          ),
         ),
       {
         response: {
@@ -163,22 +169,23 @@ export function createCategoryController(
     )
     .get(
       "/:id/listings",
-      async ({ params, query }) => {
-        await categoryService.getWithChildren(params.id);
-        const page = await listingSearchService.list({
-          ...query,
-          scope_category_id: params.id,
-          sort: query.sort ?? "created_at",
-          direction: query.direction ?? "desc",
-          per_page: query.per_page ?? 20,
-        });
-        return paginatedResponse(
-          page.data.map(serializeListingDetail),
-          "Listings retrieved",
-          page.meta,
-          page.facets,
-        );
-      },
+      async ({ params, query, request }) =>
+        cachedRead(cache, request, async () => {
+          await categoryService.getWithChildren(params.id);
+          const page = await listingSearchService.list({
+            ...query,
+            scope_category_id: params.id,
+            sort: query.sort ?? "created_at",
+            direction: query.direction ?? "desc",
+            per_page: query.per_page ?? 20,
+          });
+          return paginatedResponse(
+            page.data.map(serializeListingDetail),
+            "Listings retrieved",
+            page.meta,
+            page.facets,
+          );
+        }),
       {
         params: "category.detail.params",
         query: "listing.list.query",
@@ -193,12 +200,14 @@ export function createCategoryController(
     )
     .get(
       "/:id",
-      async ({ params }) =>
-        successResponse(
-          serializeCategoryDetail(
-            await categoryService.getWithChildren(params.id),
+      async ({ params, request }) =>
+        cachedRead(cache, request, async () =>
+          successResponse(
+            serializeCategoryDetail(
+              await categoryService.getWithChildren(params.id),
+            ),
+            "Category retrieved",
           ),
-          "Category retrieved",
         ),
       {
         params: "category.detail.params",
@@ -218,6 +227,7 @@ export function createCategoryController(
           ...body,
           parent_id: body.parent_id ?? null,
         });
+        await invalidateReadCache(cache);
         return status(
           201,
           successResponse(
@@ -242,6 +252,7 @@ export function createCategoryController(
       "/:id",
       async ({ params, body }) => {
         const category = await categoryService.update(params.id, body);
+        await invalidateReadCache(cache);
         return successResponse(
           serializeUpdatedCategory(category),
           "Category updated",
@@ -263,4 +274,8 @@ export function createCategoryController(
     );
 }
 
-export const categoryController = createCategoryController();
+export const categoryController = createCategoryController(
+  undefined,
+  undefined,
+  new RedisCache(),
+);

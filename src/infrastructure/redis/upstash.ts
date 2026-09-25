@@ -3,7 +3,18 @@ import { Redis } from "@upstash/redis";
 
 import { env } from "../../main/config/env";
 
-const redis = env.REDIS_BACKEND === "upstash" ? Redis.fromEnv() : undefined;
+const redis =
+  env.REDIS_BACKEND === "upstash" &&
+  env.UPSTASH_REDIS_REST_URL &&
+  env.UPSTASH_REDIS_REST_TOKEN
+    ? new Redis({
+        url: env.UPSTASH_REDIS_REST_URL,
+        token: env.UPSTASH_REDIS_REST_TOKEN,
+        retry: { retries: 0 },
+        signal: () => AbortSignal.timeout(1000),
+      })
+    : undefined;
+export const upstashRedis = redis;
 
 const readLimiter =
   redis &&

@@ -39,19 +39,6 @@ function loadEnv(): Env {
     process.exit(1);
   }
   const decoded = Value.Decode(EnvSchema, input);
-  if (process.env.VERCEL && decoded.REDIS_BACKEND !== "upstash") {
-    console.error("✗ Vercel requires REDIS_BACKEND=upstash");
-    process.exit(1);
-  }
-  if (
-    decoded.REDIS_BACKEND === "upstash" &&
-    (!decoded.UPSTASH_REDIS_REST_URL || !decoded.UPSTASH_REDIS_REST_TOKEN)
-  ) {
-    console.error(
-      "✗ Upstash requires UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN",
-    );
-    process.exit(1);
-  }
   return decoded;
 }
 
