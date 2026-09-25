@@ -48,6 +48,10 @@ concurrent serverless instances can start at the same time. Then deploy the
 repository as a Vercel project using the Bun runtime set in `vercel.json`.
 The root `server.ts` is the entrypoint; no Docker image is needed on Vercel.
 
+For demo data, run `bun run seed` from a trusted shell after migrations. The
+command uses the same direct Neon URL as migrations and adds 500 repeatable
+listings under demo categories. Do not run it during Vercel function startup.
+
 ## Rate Limiting And Checks
 
 Upstash enforces separate per-client-IP sliding windows across all function

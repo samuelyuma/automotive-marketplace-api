@@ -19,5 +19,5 @@
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true
   },
-  "include": ["src", "server.ts"]
+  "include": ["src", "server.ts", "scripts"]
 }

@@ -51,6 +51,11 @@ bun run migrate:down
 Migration files live in `migrations/` as matching `.up.sql` and
 `.down.sql` files.
 
+To add 500 repeatable demo listings after migration, run `bun run seed`.
+The command uses `DATABASE_URL_UNPOOLED` when set, otherwise `DATABASE_URL`,
+so it works with local PostgreSQL and Neon. Repeating it does not duplicate
+the demo records.
+
 ## Vercel Deployment
 
 See [the deployment guide](docs/DEPLOYMENT.md) for Neon and Upstash setup,

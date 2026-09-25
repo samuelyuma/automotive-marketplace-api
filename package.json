@@ -7,6 +7,7 @@
     "docker:down": "docker compose -f docker-compose.dev.yml down",
     "migrate:up": "bun src/infrastructure/postgres/migrate.ts up",
     "migrate:down": "bun src/infrastructure/postgres/migrate.ts down",
+    "seed": "bun scripts/seed.ts",
     "lint": "biome lint .",
     "format": "biome format --write .",
     "check": "biome check --write .",
