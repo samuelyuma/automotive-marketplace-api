@@ -21,10 +21,10 @@ export class InvalidListingSearchQueryError extends DomainError {
   readonly code = "VALIDATION_ERROR";
   override readonly details: { field: string; issue: string }[];
 
-  constructor(field: string) {
+  constructor(field: string, issue = "Unknown query parameter") {
     super("Request validation failed");
     this.name = "InvalidListingSearchQueryError";
-    this.details = [{ field, issue: "Unknown query parameter" }];
+    this.details = [{ field, issue }];
   }
 }
 

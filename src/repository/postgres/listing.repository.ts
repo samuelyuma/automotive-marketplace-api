@@ -7,6 +7,7 @@ import type {
   ListingSuggestion,
   ListingSuggestionQuery,
 } from "@application/ports/listing-repository.port";
+import { InvalidListingSearchQueryError } from "@application/utils/listing-search";
 
 import type {
   Listing,
@@ -90,13 +91,15 @@ export class PgListingRepository implements ListingRepository {
       ? sql`websearch_to_tsquery('simple', ${query.q})`
       : null;
     if (query.sort === "relevance" && !textQuery)
-      throw new Error("Relevance sorting requires a search term");
+      throw new InvalidListingSearchQueryError(
+        "sort",
+        "Relevance sorting requires a search term",
+      );
     const filters = sql`
       status = 'AVAILABLE'
       ${textQuery ? sql`AND search_vector @@ ${textQuery}` : sql``}
       AND (${query.category_id ?? null}::uuid IS NULL OR category_id = ${query.category_id ?? null}::uuid)
       ${query.scope_category_id ? sql`AND category_id IN (${categoryScopeIds(query.scope_category_id)})` : sql``}
-      AND (${query.make ?? null}::text IS NULL OR lower(make) = lower(${query.make ?? null}::text))
       AND (${query.model ?? null}::text IS NULL OR lower(model) = lower(${query.model ?? null}::text))
       AND (${query.condition ?? null}::listing_conditions IS NULL OR condition = ${query.condition ?? null}::listing_conditions)
       AND (${query.fuel_type ?? null}::fuel_types IS NULL OR fuel_type = ${query.fuel_type ?? null}::fuel_types)
@@ -109,6 +112,7 @@ export class PgListingRepository implements ListingRepository {
       AND (${query.max_mileage ?? null}::integer IS NULL OR mileage <= ${query.max_mileage ?? null}::integer)
       AND (${query.location ?? null}::text IS NULL OR lower(location) = lower(${query.location ?? null}::text))
     `;
+    const makeFilter = sql`AND (${query.make ?? null}::text IS NULL OR lower(make) = lower(${query.make ?? null}::text))`;
 
     const sortColumn =
       query.sort === "relevance"
@@ -146,6 +150,7 @@ export class PgListingRepository implements ListingRepository {
                ${sortColumn}::text AS cursor_value
         FROM vehicle_listings
         WHERE ${filters}
+          ${makeFilter}
           ${cursorFilter}
         ORDER BY ${sortColumn} ${sortDirection}, id ${sortDirection}
         LIMIT ${query.per_page + 1}

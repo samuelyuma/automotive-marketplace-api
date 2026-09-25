@@ -9,7 +9,7 @@ export const categoryAttributeInputSchema = t.Object(
       t.Literal("RANGE"),
       t.Literal("BOOLEAN"),
     ]),
-    options: t.Optional(t.Nullable(t.Array(t.String()))),
+    options: t.Optional(t.Nullable(t.Array(t.String(), { maxItems: 25 }))),
   },
   { additionalProperties: false },
 );
