@@ -56,6 +56,16 @@ export function decodeListingCursor(
 
     if (sort === "created_at") {
       if (!Number.isFinite(Date.parse(value.value))) throw new Error();
+    } else if (sort === "relevance") {
+      const rank = Number(value.value);
+      if (
+        value.value.length > 64 ||
+        !/^(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(value.value) ||
+        !Number.isFinite(rank) ||
+        rank < 0 ||
+        rank > 1e6
+      )
+        throw new Error();
     } else {
       const numeric = Number(value.value);
       const minimum = sort === "year" ? 1900 : 0;

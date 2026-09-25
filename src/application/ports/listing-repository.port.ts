@@ -7,14 +7,28 @@ import type {
 
 export interface ListingRepository {
   list(query: ListingSearchQuery): Promise<ListingSearchResult>;
+  suggest(query: ListingSuggestionQuery): Promise<ListingSuggestion[]>;
   getById(id: string): Promise<Listing | null>;
   create(data: NewListing): Promise<Listing>;
   update(id: string, data: UpdateListing): Promise<Listing | null>;
   softDelete(id: string): Promise<SoftDeletedListing | null>;
 }
 
-export type ListingSort = "created_at" | "price" | "mileage" | "year";
+export type ListingSort =
+  | "created_at"
+  | "price"
+  | "mileage"
+  | "year"
+  | "relevance";
 export type ListingDirection = "asc" | "desc";
+
+export type ListingSuggestionType = "make" | "model" | "location";
+export type ListingSuggestion = { type: ListingSuggestionType; value: string };
+export type ListingSuggestionQuery = {
+  q: string;
+  type?: ListingSuggestionType;
+  limit: number;
+};
 
 export type ListingFilters = {
   category_id?: string;
@@ -36,6 +50,8 @@ export type ListingFilters = {
 export type ListingCursor = { id: string; value: string };
 
 export type ListingSearchQuery = ListingFilters & {
+  q?: string;
+  include_facets?: boolean;
   sort: ListingSort;
   direction: ListingDirection;
   per_page: number;

@@ -11,17 +11,25 @@ import type {
   ListingFilters,
   ListingRepository,
   ListingSort,
+  ListingSuggestionType,
 } from "../ports/listing-repository.port";
 import {
   decodeListingCursor,
   encodeListingCursor,
 } from "../utils/listing-cursor";
+import {
+  normalizeListingSearchTerm,
+  validateListingSearchRanges,
+} from "../utils/listing-search";
+import { InvalidListingSuggestionError } from "../utils/listing-suggestion";
 
 export class ListingService {
   constructor(private readonly repository: ListingRepository) {}
 
   async list(
     query: ListingFilters & {
+      q?: string;
+      include_facets?: boolean;
       sort: ListingSort;
       direction: ListingDirection;
       per_page: number;
@@ -53,6 +61,41 @@ export class ListingService {
       },
       facets: result.facets,
     };
+  }
+
+  search(
+    query: ListingFilters & {
+      q?: string;
+      sort?: ListingSort;
+      direction?: ListingDirection;
+      per_page?: number;
+      cursor?: string;
+    },
+  ) {
+    validateListingSearchRanges(query);
+    const q = normalizeListingSearchTerm(query.q);
+    const sort =
+      query.sort === "relevance" && !q
+        ? "created_at"
+        : (query.sort ?? (q ? "relevance" : "created_at"));
+    return this.list({
+      ...query,
+      q,
+      sort,
+      direction: query.direction ?? "desc",
+      per_page: query.per_page ?? 20,
+      include_facets: false,
+    });
+  }
+
+  suggest(query: { q: string; type?: ListingSuggestionType; limit?: number }) {
+    const q = query.q.trim();
+    if (q.length < 2) throw new InvalidListingSuggestionError();
+    return this.repository.suggest({
+      q,
+      type: query.type,
+      limit: Math.min(query.limit ?? 10, 20),
+    });
   }
 
   async getById(id: string): Promise<Listing> {

@@ -4,6 +4,8 @@ import type {
   ListingRepository,
   ListingSearchQuery,
   ListingSearchResult,
+  ListingSuggestion,
+  ListingSuggestionQuery,
 } from "@application/ports/listing-repository.port";
 
 import type {
@@ -15,6 +17,8 @@ import type {
 import { ListingCategoryNotFoundError } from "@domain/errors/listing-error";
 
 import { sql } from "@infrastructure/postgres/client";
+
+import { categoryScopeIds } from "./category-scope";
 
 type ListingRow = Omit<Listing, "price"> & { price: string };
 type ListingPageRow = ListingRow & { cursor_value: string };
@@ -34,6 +38,42 @@ function throwListingError(error: unknown): never {
 }
 
 export class PgListingRepository implements ListingRepository {
+  async suggest(query: ListingSuggestionQuery): Promise<ListingSuggestion[]> {
+    // Escape LIKE wildcards so each keystroke is matched as literal prefix text.
+    const pattern = `${query.q.replace(/[!%_]/g, "!$&")}%`;
+    const type = query.type ?? null;
+    return sql<ListingSuggestion[]>`
+      WITH raw AS (
+        SELECT 'make'::text AS type, make AS value
+        FROM vehicle_listings
+        WHERE status = 'AVAILABLE'
+          AND (${type}::text IS NULL OR ${type}::text = 'make')
+          AND lower(make) LIKE lower(${pattern}) ESCAPE '!'
+        UNION ALL
+        SELECT 'model'::text AS type, model AS value
+        FROM vehicle_listings
+        WHERE status = 'AVAILABLE'
+          AND (${type}::text IS NULL OR ${type}::text = 'model')
+          AND lower(model) LIKE lower(${pattern}) ESCAPE '!'
+        UNION ALL
+        SELECT 'location'::text AS type, location AS value
+        FROM vehicle_listings
+        WHERE status = 'AVAILABLE'
+          AND (${type}::text IS NULL OR ${type}::text = 'location')
+          AND lower(location) LIKE lower(${pattern}) ESCAPE '!'
+      ), deduplicated AS (
+        SELECT DISTINCT ON (type, lower(value)) type, value
+        FROM raw
+        ORDER BY type, lower(value), value
+      )
+      SELECT type, value
+      FROM deduplicated
+      ORDER BY CASE type WHEN 'make' THEN 0 WHEN 'model' THEN 1 ELSE 2 END,
+               lower(value), value
+      LIMIT ${query.limit}
+    `;
+  }
+
   async getById(id: string): Promise<Listing | null> {
     const [listing] = await sql<ListingRow[]>`
       SELECT id, category_id, make, model, year, price, mileage,
@@ -46,22 +86,16 @@ export class PgListingRepository implements ListingRepository {
   }
 
   async list(query: ListingSearchQuery): Promise<ListingSearchResult> {
+    const textQuery = query.q
+      ? sql`websearch_to_tsquery('simple', ${query.q})`
+      : null;
+    if (query.sort === "relevance" && !textQuery)
+      throw new Error("Relevance sorting requires a search term");
     const filters = sql`
       status = 'AVAILABLE'
+      ${textQuery ? sql`AND search_vector @@ ${textQuery}` : sql``}
       AND (${query.category_id ?? null}::uuid IS NULL OR category_id = ${query.category_id ?? null}::uuid)
-      AND (${query.scope_category_id ?? null}::uuid IS NULL OR category_id IN (
-        WITH RECURSIVE category_scope AS (
-          SELECT id, ARRAY[id] AS path
-          FROM categories
-          WHERE id = ${query.scope_category_id ?? null}::uuid
-          UNION ALL
-          SELECT child.id, category_scope.path || child.id
-          FROM categories child
-          JOIN category_scope ON child.parent_id = category_scope.id
-          WHERE NOT child.id = ANY(category_scope.path)
-        )
-        SELECT id FROM category_scope
-      ))
+      ${query.scope_category_id ? sql`AND category_id IN (${categoryScopeIds(query.scope_category_id)})` : sql``}
       AND (${query.make ?? null}::text IS NULL OR lower(make) = lower(${query.make ?? null}::text))
       AND (${query.model ?? null}::text IS NULL OR lower(model) = lower(${query.model ?? null}::text))
       AND (${query.condition ?? null}::listing_conditions IS NULL OR condition = ${query.condition ?? null}::listing_conditions)
@@ -77,24 +111,28 @@ export class PgListingRepository implements ListingRepository {
     `;
 
     const sortColumn =
-      query.sort === "created_at"
-        ? sql`created_at`
-        : query.sort === "price"
-          ? sql`price`
-          : query.sort === "mileage"
-            ? sql`mileage`
-            : sql`year`;
+      query.sort === "relevance"
+        ? sql`ts_rank(search_vector, ${textQuery})`
+        : query.sort === "created_at"
+          ? sql`created_at`
+          : query.sort === "price"
+            ? sql`price`
+            : query.sort === "mileage"
+              ? sql`mileage`
+              : sql`year`;
     const sortDirection = query.direction === "asc" ? sql`ASC` : sql`DESC`;
     const comparator = query.direction === "asc" ? sql`>` : sql`<`;
     // Bind timestamps as text so Postgres.js preserves microseconds in the cursor.
     const cursorValue = query.cursor
       ? query.sort === "created_at"
         ? sql`${query.cursor.value}::text::timestamptz`
-        : query.sort === "price"
-          ? sql`${query.cursor.value}::bigint`
-          : query.sort === "mileage"
-            ? sql`${query.cursor.value}::integer`
-            : sql`${query.cursor.value}::smallint`
+        : query.sort === "relevance"
+          ? sql`${query.cursor.value}::real`
+          : query.sort === "price"
+            ? sql`${query.cursor.value}::bigint`
+            : query.sort === "mileage"
+              ? sql`${query.cursor.value}::integer`
+              : sql`${query.cursor.value}::smallint`
       : null;
     const cursorFilter = query.cursor
       ? sql`AND (${sortColumn}, id) ${comparator} (${cursorValue}, ${query.cursor.id}::uuid)`
@@ -112,13 +150,15 @@ export class PgListingRepository implements ListingRepository {
         ORDER BY ${sortColumn} ${sortDirection}, id ${sortDirection}
         LIMIT ${query.per_page + 1}
       `,
-      sql<{ value: string; count: number }[]>`
-        SELECT make AS value, count(*)::integer AS count
-        FROM vehicle_listings
-        WHERE ${filters}
-        GROUP BY make
-        ORDER BY count DESC, value ASC
-      `,
+      query.include_facets === false
+        ? Promise.resolve([])
+        : sql<{ value: string; count: number }[]>`
+            SELECT make AS value, count(*)::integer AS count
+            FROM vehicle_listings
+            WHERE ${filters}
+            GROUP BY make
+            ORDER BY count DESC, value ASC
+          `,
     ]);
 
     return {
