@@ -4,7 +4,7 @@ import {
   badRequestSchema,
   internalErrorSchema,
   successSchema,
-} from "../response.validator";
+} from "./response.validator";
 
 const suggestionTypeSchema = t.Union([
   t.Literal("make"),
@@ -32,5 +32,5 @@ export const suggestListingsRouteDetail = {
   summary: "Suggest Listing Search Terms",
   description:
     "Returns up to 10 case-insensitive, distinct prefix suggestions across available listing makes, models, and locations. Pass type to limit the field and limit up to 20 to adjust the result count.",
-  tags: ["Listing"],
+  tags: ["Search & Filters"],
 };

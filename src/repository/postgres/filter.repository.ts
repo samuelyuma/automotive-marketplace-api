@@ -1,8 +1,8 @@
 import type {
-  CategoryFilterRepository,
-  CategoryFilterStats,
   FilterCount,
-} from "@application/ports/category-filter-repository.port";
+  FilterRepository,
+  FilterStats,
+} from "@application/ports/filter-repository.port";
 
 import { sql } from "@infrastructure/postgres/client";
 
@@ -22,18 +22,16 @@ type StatsRow = {
   engine_cc_max: number | null;
 };
 
-export class PgCategoryFilterRepository implements CategoryFilterRepository {
-  getGlobal(): Promise<CategoryFilterStats> {
+export class PgFilterRepository implements FilterRepository {
+  getGlobal(): Promise<FilterStats> {
     return this.getStats(null);
   }
 
-  getForCategory(categoryId: string): Promise<CategoryFilterStats> {
+  getForCategory(categoryId: string): Promise<FilterStats> {
     return this.getStats(categoryId);
   }
 
-  private async getStats(
-    categoryId: string | null,
-  ): Promise<CategoryFilterStats> {
+  private async getStats(categoryId: string | null): Promise<FilterStats> {
     const [row] = await sql<StatsRow[]>`
       WITH available AS (
         SELECT condition, fuel_type, transmission, price, year, mileage, engine_cc

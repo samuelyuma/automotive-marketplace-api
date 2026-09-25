@@ -1,8 +1,8 @@
 import Elysia from "elysia";
 
-import type { CategoryFilterRepository } from "@application/ports/category-filter-repository.port";
 import type { CategoryRepository } from "@application/ports/category-repository.port";
-import { CategoryFilterService } from "@application/service/category-filter.service";
+import type { FilterRepository } from "@application/ports/filter-repository.port";
+import { FilterService } from "@application/service/filter.service";
 
 import {
   errorResponse,
@@ -10,16 +10,13 @@ import {
   successResponse,
 } from "@interface/http/response";
 import {
-  GetCategoryFiltersModel,
+  FilterModel,
   getCategoryFiltersRouteDetail,
-} from "@interface/validators/filter/get-category-filters.validator";
-import {
-  GetFiltersModel,
   getFiltersRouteDetail,
-} from "@interface/validators/filter/get-filters.validator";
+} from "@interface/validators/filter.validator";
 
 import { PgCategoryRepository } from "@repository/postgres/category.repository";
-import { PgCategoryFilterRepository } from "@repository/postgres/category-filter.repository";
+import { PgFilterRepository } from "@repository/postgres/filter.repository";
 
 function unknownQueryError(request: Request) {
   if (new URL(request.url).searchParams.size === 0) return null;
@@ -32,15 +29,11 @@ function unknownQueryError(request: Request) {
 
 export function createFilterController(
   categoryRepository: CategoryRepository = new PgCategoryRepository(),
-  filterRepository: CategoryFilterRepository = new PgCategoryFilterRepository(),
+  filterRepository: FilterRepository = new PgFilterRepository(),
 ) {
-  const service = new CategoryFilterService(
-    categoryRepository,
-    filterRepository,
-  );
+  const service = new FilterService(categoryRepository, filterRepository);
   return new Elysia({ prefix: "/filters" })
-    .use(GetCategoryFiltersModel)
-    .use(GetFiltersModel)
+    .use(FilterModel)
     .get(
       "",
       async ({ request, status }) => {

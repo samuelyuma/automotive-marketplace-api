@@ -1,6 +1,6 @@
 import { DomainError } from "@domain/errors/domain-error";
 
-import type { ListingFilters } from "../ports/listing-repository.port";
+import type { ListingFilters } from "../ports/listing-search-repository.port";
 
 export class InvalidListingSearchRangeError extends DomainError {
   readonly kind = "bad_request" as const;

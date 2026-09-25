@@ -1,9 +1,9 @@
 import Elysia from "elysia";
 
 import type { CategoryRepository } from "@application/ports/category-repository.port";
-import type { ListingRepository } from "@application/ports/listing-repository.port";
+import type { ListingSearchRepository } from "@application/ports/listing-search-repository.port";
 import { CategoryService } from "@application/service/category.service";
-import { ListingService } from "@application/service/listing.service";
+import { ListingSearchService } from "@application/service/listing-search.service";
 
 import type {
   CategoryDetail,
@@ -37,7 +37,7 @@ import {
 } from "@interface/validators/listing/list-listings.validator";
 
 import { PgCategoryRepository } from "@repository/postgres/category.repository";
-import { PgListingRepository } from "@repository/postgres/listing.repository";
+import { PgListingSearchRepository } from "@repository/postgres/listing-search.repository";
 
 function serializeCategoryDetail({ category, children }: CategoryDetail) {
   return {
@@ -138,10 +138,10 @@ function serializeUpdatedCategory(category: UpdatedCategoryWithAttributes) {
 
 export function createCategoryController(
   repository: CategoryRepository = new PgCategoryRepository(),
-  listingRepository: ListingRepository = new PgListingRepository(),
+  listingRepository: ListingSearchRepository = new PgListingSearchRepository(),
 ) {
   const categoryService = new CategoryService(repository);
-  const listingService = new ListingService(listingRepository);
+  const listingSearchService = new ListingSearchService(listingRepository);
 
   return new Elysia({ prefix: "/categories" })
     .use(CreateCategoryModel)
@@ -168,7 +168,7 @@ export function createCategoryController(
       "/:id/listings",
       async ({ params, query }) => {
         await categoryService.getWithChildren(params.id);
-        const page = await listingService.list({
+        const page = await listingSearchService.list({
           ...query,
           scope_category_id: params.id,
           sort: query.sort ?? "created_at",

@@ -1,8 +1,9 @@
 import Elysia from "elysia";
 
 import type { ListingRepository } from "@application/ports/listing-repository.port";
+import type { ListingSearchRepository } from "@application/ports/listing-search-repository.port";
 import { ListingService } from "@application/service/listing.service";
-import { InvalidListingSearchQueryError } from "@application/utils/listing-search";
+import { ListingSearchService } from "@application/service/listing-search.service";
 
 import type { Listing } from "@domain/entities/listing";
 
@@ -25,41 +26,12 @@ import {
   listListingsRouteDetail,
 } from "@interface/validators/listing/list-listings.validator";
 import {
-  SearchListingsModel,
-  searchListingsRouteDetail,
-} from "@interface/validators/listing/search-listings.validator";
-import {
-  SuggestListingsModel,
-  suggestListingsRouteDetail,
-} from "@interface/validators/listing/suggest-listings.validator";
-import {
   UpdateListingModel,
   updateListingRouteDetail,
 } from "@interface/validators/listing/update-listing.validator";
 
 import { PgListingRepository } from "@repository/postgres/listing.repository";
-
-const searchQueryKeys = new Set([
-  "q",
-  "category_id",
-  "make",
-  "model",
-  "condition",
-  "fuel_type",
-  "transmission",
-  "price_min",
-  "price_max",
-  "year_min",
-  "year_max",
-  "mileage_min",
-  "mileage_max",
-  "location",
-  "sort",
-  "direction",
-  "per_page",
-  "cursor",
-]);
-const suggestQueryKeys = new Set(["q", "type", "limit"]);
+import { PgListingSearchRepository } from "@repository/postgres/listing-search.repository";
 
 function serializeListingFields(listing: Listing) {
   return {
@@ -97,21 +69,21 @@ function serializeUpdatedListing(listing: Listing) {
 
 export function createListingController(
   repository: ListingRepository = new PgListingRepository(),
+  searchRepository: ListingSearchRepository = new PgListingSearchRepository(),
 ) {
   const listingService = new ListingService(repository);
+  const searchService = new ListingSearchService(searchRepository);
 
   return new Elysia({ prefix: "/listings" })
     .use(CreateListingModel)
     .use(UpdateListingModel)
     .use(DeleteListingModel)
     .use(ListListingsModel)
-    .use(SearchListingsModel)
-    .use(SuggestListingsModel)
     .use(GetListingModel)
     .get(
       "",
       async ({ query }) => {
-        const page = await listingService.list({
+        const page = await searchService.list({
           ...query,
           sort: query.sort ?? "created_at",
           direction: query.direction ?? "desc",
@@ -132,73 +104,6 @@ export function createListingController(
           500: "listing.list.internal_error",
         },
         detail: listListingsRouteDetail,
-      },
-    )
-    .get(
-      "/search/suggest",
-      async ({ query, request }) => {
-        const unknown = [...new URL(request.url).searchParams.keys()].find(
-          (key) => !suggestQueryKeys.has(key),
-        );
-        if (unknown !== undefined)
-          throw new InvalidListingSearchQueryError(unknown);
-        return successResponse(
-          await listingService.suggest(query),
-          "Suggestions retrieved",
-        );
-      },
-      {
-        query: "listing.suggest.query",
-        response: {
-          200: "listing.suggest",
-          400: "listing.suggest.bad_request",
-          500: "listing.suggest.internal_error",
-        },
-        detail: suggestListingsRouteDetail,
-      },
-    )
-    .get(
-      "/search",
-      async ({ query, request }) => {
-        const unknown = [...new URL(request.url).searchParams.keys()].find(
-          (key) => !searchQueryKeys.has(key),
-        );
-        if (unknown !== undefined)
-          throw new InvalidListingSearchQueryError(unknown);
-        const page = await listingService.search({
-          q: query.q,
-          category_id: query.category_id,
-          make: query.make,
-          model: query.model,
-          condition: query.condition,
-          fuel_type: query.fuel_type,
-          transmission: query.transmission,
-          min_price: query.price_min,
-          max_price: query.price_max,
-          min_year: query.year_min,
-          max_year: query.year_max,
-          min_mileage: query.mileage_min,
-          max_mileage: query.mileage_max,
-          location: query.location,
-          sort: query.sort,
-          direction: query.direction,
-          per_page: query.per_page,
-          cursor: query.cursor,
-        });
-        return paginatedResponse(
-          page.data.map(serializeListingDetail),
-          "Listings found",
-          page.meta,
-        );
-      },
-      {
-        query: "listing.search.query",
-        response: {
-          200: "listing.search",
-          400: "listing.search.bad_request",
-          500: "listing.search.internal_error",
-        },
-        detail: searchListingsRouteDetail,
       },
     )
     .get(

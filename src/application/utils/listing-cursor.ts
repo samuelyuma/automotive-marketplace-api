@@ -4,7 +4,7 @@ import type {
   ListingCursor,
   ListingDirection,
   ListingSort,
-} from "../ports/listing-repository.port";
+} from "../ports/listing-search-repository.port";
 
 export class InvalidListingCursorError extends DomainError {
   readonly kind = "bad_request" as const;

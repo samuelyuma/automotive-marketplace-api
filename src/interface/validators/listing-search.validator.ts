@@ -1,22 +1,22 @@
 import Elysia, { t } from "elysia";
 
 import {
-  badRequestSchema,
-  internalErrorSchema,
-  paginationMetaSchema,
-  successSchema,
-} from "../response.validator";
-import {
   listingListItemSchema,
   listingMileageQuerySchema,
   listingPriceQuerySchema,
   listingYearQuerySchema,
-} from "./list-listings.validator";
+} from "./listing/list-listings.validator";
 import {
   conditionSchema,
   fuelTypeSchema,
   transmissionSchema,
-} from "./listing-fields.validator";
+} from "./listing/listing-fields.validator";
+import {
+  badRequestSchema,
+  internalErrorSchema,
+  paginationMetaSchema,
+  successSchema,
+} from "./response.validator";
 
 export const SearchListingsModel = new Elysia().model({
   "listing.search.query": t.Object(
@@ -64,5 +64,5 @@ export const searchListingsRouteDetail = {
   summary: "Search Listings",
   description:
     "Searches available listings with full-text terms and structured filters. Uses cursor pagination and separate sort/direction parameters; defaults to relevance for a search term and newest otherwise.",
-  tags: ["Listing"],
+  tags: ["Search & Filters"],
 };

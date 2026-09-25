@@ -1,9 +1,9 @@
-import type {
-  CategoryFilterRepository,
-  CategoryFilterStats,
-  FilterCount,
-} from "@application/ports/category-filter-repository.port";
 import type { CategoryRepository } from "@application/ports/category-repository.port";
+import type {
+  FilterCount,
+  FilterRepository,
+  FilterStats,
+} from "@application/ports/filter-repository.port";
 
 import type { CategoryAttribute } from "@domain/entities/category";
 import { CategoryNotFoundError } from "@domain/errors/category-error";
@@ -17,7 +17,7 @@ function includeUnused(values: string[], counts: FilterCount[]): FilterCount[] {
   return values.map((value) => ({ value, count: byValue.get(value) ?? 0 }));
 }
 
-function fixedFilters(stats: CategoryFilterStats) {
+function fixedFilters(stats: FilterStats) {
   return {
     condition: includeUnused(conditionValues, stats.condition),
     fuel_type: includeUnused(fuelTypeValues, stats.fuel_type),
@@ -28,10 +28,7 @@ function fixedFilters(stats: CategoryFilterStats) {
   };
 }
 
-function serializeAttribute(
-  attribute: CategoryAttribute,
-  stats: CategoryFilterStats,
-) {
+function serializeAttribute(attribute: CategoryAttribute, stats: FilterStats) {
   const base = {
     id: attribute.id,
     key: attribute.key,
@@ -40,7 +37,7 @@ function serializeAttribute(
   if (attribute.type === "ENUM")
     return { ...base, type: "ENUM" as const, options: attribute.options ?? [] };
   if (attribute.type === "RANGE") {
-    const ranges: Record<string, CategoryFilterStats["price"]> = {
+    const ranges: Record<string, FilterStats["price"]> = {
       price: stats.price,
       year: stats.year,
       mileage: stats.mileage,
@@ -52,10 +49,10 @@ function serializeAttribute(
   return { ...base, type: "BOOLEAN" as const };
 }
 
-export class CategoryFilterService {
+export class FilterService {
   constructor(
     private readonly categories: CategoryRepository,
-    private readonly filters: CategoryFilterRepository,
+    private readonly filters: FilterRepository,
   ) {}
 
   async getGlobal() {
