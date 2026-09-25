@@ -46,7 +46,7 @@ flowchart LR
 │   │   └── policies/              # Category rules and policies
 │   ├── infrastructure/
 │   │   ├── logging/               # Logging and request trace context
-│   │   ├── postgres/              # PostgreSQL client, health, and migration support
+│   │   ├── postgres/              # PostgreSQL client, health, query timing, and migrations
 │   │   └── redis/                  # Redis clients, cache, and health checks
 │   ├── interface/
 │   │   ├── controllers/           # HTTP routes
@@ -85,7 +85,7 @@ Categories use an adjacency list: each row has an optional `parent_id` referenci
 
 Attribute definitions belong to one category and have an `ENUM`, `RANGE`, or `BOOLEAN` type. Active definitions have unique keys within their category; removed definitions are soft-deleted and can be replaced. Current listing filter values still come from fixed listing columns. Category definitions describe available filter metadata, rather than arbitrary per-listing values.
 
-`GET /filters` returns catalog-wide counts and ranges. `GET /filters/:categoryId` scopes the counts to the category and its descendants, then returns active definitions from the requested category.
+`GET /api/filters` returns catalog-wide counts and ranges. `GET /api/filters/:categoryId` scopes the counts to the category and its descendants, then returns active definitions from the requested category.
 
 ## Listing Search
 
@@ -113,7 +113,7 @@ The indexes target the query shapes implemented in the repository. They do not g
 
 Listing pages use keyset pagination. A cursor encodes its version, sort field, direction, last sort value, and listing ID. The next query compares the sort value and ID as a tuple, and requests one extra row to determine whether another page exists. Including the ID makes ordering stable when multiple listings share a sort value. Cursors are validated against the selected sort and direction before use.
 
-`per_page` defaults to 20 and is capped at 100. Browse results include make facets. Text search omits facets and defaults to relevance sorting when a search term is present; browse defaults to newest first. Use Swagger UI at `/docs` for the generated endpoint schemas.
+`per_page` defaults to 20 and is capped at 100. Browse results include make facets. Text search omits facets and defaults to relevance sorting when a search term is present; browse defaults to newest first. Use the Scalar API reference at `/docs` for the generated endpoint schemas.
 
 Redis caches listing reads and suggestions for 60 seconds, and category and filter reads for 300 seconds. Listing and category writes invalidate related cache entries. In deployed mode, Upstash also enforces separate per-IP rate limits for read and non-read requests. Local TCP Redis mode does not apply the Upstash rate limiter.
 
@@ -134,8 +134,12 @@ Elysia validates request paths, query strings, and bodies against TypeBox schema
 
 Errors use a shared JSON shape with `success`, `message`, and an `error` object. Request validation and parse errors return 400. Domain errors map to 400, 404, 409, or 422 according to their kind. Unexpected errors return 500 without exposing exception details. Each request receives an ID used in logs and error context.
 
+## Logging and Query Timing
+
+HTTP access logs include the request ID, method, path, status, and request duration. PostgreSQL repository calls wrapped by `timedQuery` log their query label, weight, duration, and request context. Calls over 100 ms for light queries or 500 ms for heavy queries produce warnings. Faster calls are logged at debug level, so the default `LOG_LEVEL=info` hides their timing records. Set `LOG_LEVEL=debug` to see every instrumented query completion locally.
+
 ## Deployment and Operations
 
 Local Compose runs the API, PostgreSQL 18, and Redis 8. The Vercel deployment uses Bun 1.x, Neon PostgreSQL, and Upstash Redis. Migrations run before traffic is directed to a deployment, rather than during function startup. The health endpoint reports application, PostgreSQL, and Redis status; it returns 503 when PostgreSQL is unavailable.
 
-See [the deployment guide](DEPLOYMENT.md) for service configuration, migrations, rate limits, and public deployment checks. The OpenAPI document is available at `/docs/json`, and Swagger UI is available at `/docs`.
+See [the deployment guide](DEPLOYMENT.md) for service configuration, migrations, rate limits, and public deployment checks. API routes are grouped under `/api`; the OpenAPI document remains at `/docs/json`, and Scalar API reference remains at `/docs`.

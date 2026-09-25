@@ -35,12 +35,24 @@ export function createApp({
         check: rateLimitCheck,
       }),
     )
-    .use(openapi({ path: "/docs" }))
-    .use(healthController)
-    .use(createCategoryController(container))
-    .use(createFilterController(container))
-    .use(createListingSearchController(container))
-    .use(createListingController(container));
+    .use(
+      openapi({
+        path: "/docs",
+        provider: "scalar",
+        scalar: {
+          theme: "alternate",
+          customCss: "",
+        },
+      }),
+    )
+    .group("/api", (api) =>
+      api
+        .use(healthController)
+        .use(createCategoryController(container))
+        .use(createFilterController(container))
+        .use(createListingSearchController(container))
+        .use(createListingController(container)),
+    );
 }
 
 export function createServer() {

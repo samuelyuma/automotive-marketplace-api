@@ -4,15 +4,30 @@ A REST API for an automotive marketplace. Sellers can create and manage vehicle 
 
 The project focuses on relational schema design, category and filter behavior, search performance, API behavior, and code organization. The current implementation and its limits are described in [the architecture guide](docs/ARCHITECTURE.md).
 
+## Tech Stack
+
+| Layer | Technology |
+| --- | --- |
+| Runtime and language | Bun and TypeScript |
+| HTTP API and validation | Elysia and TypeBox |
+| Database | PostgreSQL; Neon for the hosted deployment |
+| Cache and rate limiting | Redis locally; Upstash Redis for the hosted deployment |
+| API documentation | `@elysia/openapi`, OpenAPI, and Scalar |
+| Logging | Pino with the Elysia logger integration |
+| Local services | Docker Compose |
+| Hosting | Vercel |
+
 ## Live API
 
 **Base URL:** [automotive-marketplace-api-rouge.vercel.app](https://automotive-marketplace-api-rouge.vercel.app/)
 
-Open the [production API documentation](https://automotive-marketplace-api-rouge.vercel.app/docs), the [OpenAPI JSON](https://automotive-marketplace-api-rouge.vercel.app/docs/json), or the [health check](https://automotive-marketplace-api-rouge.vercel.app/health-check). Deployment steps and smoke checks are in [the deployment guide](docs/DEPLOYMENT.md).
+**REST API prefix:** `/api` (the Scalar API reference stays at `/docs`).
+
+Open the [production API documentation](https://automotive-marketplace-api-rouge.vercel.app/docs), the [OpenAPI JSON](https://automotive-marketplace-api-rouge.vercel.app/docs/json), or the [health check](https://automotive-marketplace-api-rouge.vercel.app/api/health-check). Deployment steps and smoke checks are in [the deployment guide](docs/DEPLOYMENT.md).
 
 ## API Documentation
 
-- [Local Swagger UI](http://localhost:8080/docs) when running locally
+- [Local Scalar API reference](http://localhost:8080/docs) when running locally
 - [Local OpenAPI JSON](http://localhost:8080/docs/json) when running locally
 
 The OpenAPI document is generated from the route schemas and documents the API endpoints, request parameters, and response shapes.
@@ -53,7 +68,7 @@ cp .env.example .env
 | --- | --- |
 | `NODE_ENV` | Runtime mode. The local example uses `development`. |
 | `PORT` | API port. Defaults to `8080`. |
-| `LOG_LEVEL` | Log level: `debug`, `info`, `warn`, or `error`. |
+| `LOG_LEVEL` | Log level: `debug`, `info`, `warn`, or `error`. Use `debug` to see every instrumented database query timing; `info` shows slow-query warnings but hides routine timings. |
 | `DATABASE_URL` | PostgreSQL connection used by the API and, by default, migrations. |
 | `DATABASE_URL_UNPOOLED` | Optional direct database URL. Migrations and seeding prefer it when set. |
 | `REDIS_BACKEND` | `tcp` for local Redis or `upstash` for Upstash Redis. |
@@ -101,8 +116,8 @@ If the containerized API is already running, stop it first to free the API port.
 
 The API defaults to `http://localhost:8080`:
 
-- Health check: `http://localhost:8080/health-check`
-- Swagger UI: `http://localhost:8080/docs`
+- Health check: `http://localhost:8080/api/health-check`
+- Scalar API reference: `http://localhost:8080/docs`
 - OpenAPI JSON: `http://localhost:8080/docs/json`
 
 ## Migrations and Demo Data
@@ -127,23 +142,23 @@ The seed creates 500 repeatable listings across nine vehicle categories in a 10-
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `GET` | `/health-check` | Check application, PostgreSQL, and Redis health. |
-| `GET` | `/categories` | Return the nested category tree. |
-| `GET` | `/categories/:id` | Return a category, active attribute definitions, and direct children. |
-| `GET` | `/categories/:id/listings` | Browse available listings in a category subtree. |
-| `POST` | `/categories` | Create a root category or child category. |
-| `PATCH` | `/categories/:id` | Update a category or its attribute definitions. |
-| `GET` | `/filters` | Return catalog-wide filter counts and ranges. |
-| `GET` | `/filters/:categoryId` | Return filters for a category subtree. |
-| `GET` | `/listings` | Browse available listings with filters, make facets, and cursor pagination. |
-| `GET` | `/listings/:id` | Return one listing unless it has been removed. |
-| `POST` | `/listings` | Create a listing in an existing category. |
-| `PATCH` | `/listings/:id` | Update fields on an existing listing. |
-| `DELETE` | `/listings/:id` | Mark a listing as removed. |
-| `GET` | `/listings/search` | Search available listings with text and structured filters. |
-| `GET` | `/listings/search/suggest` | Return prefix suggestions for makes, models, or locations. |
+| `GET` | `/api/health-check` | Check application, PostgreSQL, and Redis health. |
+| `GET` | `/api/categories` | Return the nested category tree. |
+| `GET` | `/api/categories/:id` | Return a category, active attribute definitions, and direct children. |
+| `GET` | `/api/categories/:id/listings` | Browse available listings in a category subtree. |
+| `POST` | `/api/categories` | Create a root category or child category. |
+| `PATCH` | `/api/categories/:id` | Update a category or its attribute definitions. |
+| `GET` | `/api/filters` | Return catalog-wide filter counts and ranges. |
+| `GET` | `/api/filters/:categoryId` | Return filters for a category subtree. |
+| `GET` | `/api/listings` | Browse available listings with filters, make facets, and cursor pagination. |
+| `GET` | `/api/listings/:id` | Return one listing unless it has been removed. |
+| `POST` | `/api/listings` | Create a listing in an existing category. |
+| `PATCH` | `/api/listings/:id` | Update fields on an existing listing. |
+| `DELETE` | `/api/listings/:id` | Mark a listing as removed. |
+| `GET` | `/api/listings/search` | Search available listings with text and structured filters. |
+| `GET` | `/api/listings/search/suggest` | Return prefix suggestions for makes, models, or locations. |
 
-The Swagger UI linked in [Live API](#live-api) documents endpoint parameters and schemas. For `/listings`, range filters use names such as `min_price` and `max_year`. `/listings/search` uses `price_min` and `year_max` instead. Both endpoints return a `next_cursor` for the following page.
+The Scalar API reference linked in [Live API](#live-api) documents endpoint parameters and schemas. For `/api/listings`, range filters use names such as `min_price` and `max_year`. `/api/listings/search` uses `price_min` and `year_max` instead. Both endpoints return a `next_cursor` for the following page.
 
 ## Schema Diagram
 

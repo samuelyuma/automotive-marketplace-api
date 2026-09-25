@@ -88,6 +88,6 @@ export const listListingsRouteDetail = {
 export const listCategoryListingsRouteDetail = {
   summary: "Browse Category Listings",
   description:
-    "Returns available listings in this category and all its subcategories, with the same filters, sort, facets, and cursor pagination as GET /listings.",
+    "Returns available listings in this category and all its subcategories, with the same filters, sort, facets, and cursor pagination as GET /api/listings.",
   tags: ["Category"],
 };

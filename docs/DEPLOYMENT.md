@@ -61,7 +61,7 @@ An exceeded window returns HTTP 429 with `Retry-After`. If Upstash cannot
 make a decision, the API returns HTTP 503 before the route handler touches
 Neon. Local TCP mode skips rate limiting and requires no Upstash credentials.
 
-After a preview deployment, check `/docs/json` and `/health-check`, then
+After a preview deployment, check `/docs/json` and `/api/health-check`, then
 exercise one read and one write against test data. Confirm that repeated
 requests return 429 with `Retry-After` and that a normal request still
 works after the window resets. Verify `bun run dev` and Docker Compose
@@ -74,7 +74,7 @@ remain public, so callers can modify data within their quota.
 ## Verify the Public Deployment
 
 The root README lists the production base URL and links to its API docs. Check
-`/health-check`, `/docs`, and `/docs/json` on that public host. Make a read
+`/api/health-check`, `/docs`, and `/docs/json` on that public host. Make a read
 request against seeded data and confirm that search returns a response without
 relying on local services.
 
