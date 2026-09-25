@@ -4,6 +4,8 @@ import type {
   ListingRepository,
   ListingSearchQuery,
   ListingSearchResult,
+  ListingSuggestion,
+  ListingSuggestionQuery,
 } from "@application/ports/listing-repository.port";
 
 import type {
@@ -36,6 +38,42 @@ function throwListingError(error: unknown): never {
 }
 
 export class PgListingRepository implements ListingRepository {
+  async suggest(query: ListingSuggestionQuery): Promise<ListingSuggestion[]> {
+    // Escape LIKE wildcards so each keystroke is matched as literal prefix text.
+    const pattern = `${query.q.replace(/[!%_]/g, "!$&")}%`;
+    const type = query.type ?? null;
+    return sql<ListingSuggestion[]>`
+      WITH raw AS (
+        SELECT 'make'::text AS type, make AS value
+        FROM vehicle_listings
+        WHERE status = 'AVAILABLE'
+          AND (${type}::text IS NULL OR ${type}::text = 'make')
+          AND lower(make) LIKE lower(${pattern}) ESCAPE '!'
+        UNION ALL
+        SELECT 'model'::text AS type, model AS value
+        FROM vehicle_listings
+        WHERE status = 'AVAILABLE'
+          AND (${type}::text IS NULL OR ${type}::text = 'model')
+          AND lower(model) LIKE lower(${pattern}) ESCAPE '!'
+        UNION ALL
+        SELECT 'location'::text AS type, location AS value
+        FROM vehicle_listings
+        WHERE status = 'AVAILABLE'
+          AND (${type}::text IS NULL OR ${type}::text = 'location')
+          AND lower(location) LIKE lower(${pattern}) ESCAPE '!'
+      ), deduplicated AS (
+        SELECT DISTINCT ON (type, lower(value)) type, value
+        FROM raw
+        ORDER BY type, lower(value), value
+      )
+      SELECT type, value
+      FROM deduplicated
+      ORDER BY CASE type WHEN 'make' THEN 0 WHEN 'model' THEN 1 ELSE 2 END,
+               lower(value), value
+      LIMIT ${query.limit}
+    `;
+  }
+
   async getById(id: string): Promise<Listing | null> {
     const [listing] = await sql<ListingRow[]>`
       SELECT id, category_id, make, model, year, price, mileage,

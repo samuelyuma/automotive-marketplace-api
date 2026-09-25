@@ -7,6 +7,7 @@ import type {
 
 export interface ListingRepository {
   list(query: ListingSearchQuery): Promise<ListingSearchResult>;
+  suggest(query: ListingSuggestionQuery): Promise<ListingSuggestion[]>;
   getById(id: string): Promise<Listing | null>;
   create(data: NewListing): Promise<Listing>;
   update(id: string, data: UpdateListing): Promise<Listing | null>;
@@ -20,6 +21,14 @@ export type ListingSort =
   | "year"
   | "relevance";
 export type ListingDirection = "asc" | "desc";
+
+export type ListingSuggestionType = "make" | "model" | "location";
+export type ListingSuggestion = { type: ListingSuggestionType; value: string };
+export type ListingSuggestionQuery = {
+  q: string;
+  type?: ListingSuggestionType;
+  limit: number;
+};
 
 export type ListingFilters = {
   category_id?: string;

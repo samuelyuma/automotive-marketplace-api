@@ -29,6 +29,10 @@ import {
   searchListingsRouteDetail,
 } from "@interface/validators/listing/search-listings.validator";
 import {
+  SuggestListingsModel,
+  suggestListingsRouteDetail,
+} from "@interface/validators/listing/suggest-listings.validator";
+import {
   UpdateListingModel,
   updateListingRouteDetail,
 } from "@interface/validators/listing/update-listing.validator";
@@ -55,6 +59,7 @@ const searchQueryKeys = new Set([
   "per_page",
   "cursor",
 ]);
+const suggestQueryKeys = new Set(["q", "type", "limit"]);
 
 function serializeListingFields(listing: Listing) {
   return {
@@ -101,6 +106,7 @@ export function createListingController(
     .use(DeleteListingModel)
     .use(ListListingsModel)
     .use(SearchListingsModel)
+    .use(SuggestListingsModel)
     .use(GetListingModel)
     .get(
       "",
@@ -126,6 +132,29 @@ export function createListingController(
           500: "listing.list.internal_error",
         },
         detail: listListingsRouteDetail,
+      },
+    )
+    .get(
+      "/search/suggest",
+      async ({ query, request }) => {
+        const unknown = [...new URL(request.url).searchParams.keys()].find(
+          (key) => !suggestQueryKeys.has(key),
+        );
+        if (unknown !== undefined)
+          throw new InvalidListingSearchQueryError(unknown);
+        return successResponse(
+          await listingService.suggest(query),
+          "Suggestions retrieved",
+        );
+      },
+      {
+        query: "listing.suggest.query",
+        response: {
+          200: "listing.suggest",
+          400: "listing.suggest.bad_request",
+          500: "listing.suggest.internal_error",
+        },
+        detail: suggestListingsRouteDetail,
       },
     )
     .get(

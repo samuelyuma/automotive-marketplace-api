@@ -11,6 +11,7 @@ import type {
   ListingFilters,
   ListingRepository,
   ListingSort,
+  ListingSuggestionType,
 } from "../ports/listing-repository.port";
 import {
   decodeListingCursor,
@@ -20,6 +21,7 @@ import {
   normalizeListingSearchTerm,
   validateListingSearchRanges,
 } from "../utils/listing-search";
+import { InvalidListingSuggestionError } from "../utils/listing-suggestion";
 
 export class ListingService {
   constructor(private readonly repository: ListingRepository) {}
@@ -83,6 +85,16 @@ export class ListingService {
       direction: query.direction ?? "desc",
       per_page: query.per_page ?? 20,
       include_facets: false,
+    });
+  }
+
+  suggest(query: { q: string; type?: ListingSuggestionType; limit?: number }) {
+    const q = query.q.trim();
+    if (q.length < 2) throw new InvalidListingSuggestionError();
+    return this.repository.suggest({
+      q,
+      type: query.type,
+      limit: Math.min(query.limit ?? 10, 20),
     });
   }
 
