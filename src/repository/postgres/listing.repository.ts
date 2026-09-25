@@ -48,8 +48,14 @@ export class PgListingRepository implements ListingRepository {
   }
 
   async list(query: ListingSearchQuery): Promise<ListingSearchResult> {
+    const textQuery = query.q
+      ? sql`websearch_to_tsquery('simple', ${query.q})`
+      : null;
+    if (query.sort === "relevance" && !textQuery)
+      throw new Error("Relevance sorting requires a search term");
     const filters = sql`
       status = 'AVAILABLE'
+      ${textQuery ? sql`AND search_vector @@ ${textQuery}` : sql``}
       AND (${query.category_id ?? null}::uuid IS NULL OR category_id = ${query.category_id ?? null}::uuid)
       ${query.scope_category_id ? sql`AND category_id IN (${categoryScopeIds(query.scope_category_id)})` : sql``}
       AND (${query.make ?? null}::text IS NULL OR lower(make) = lower(${query.make ?? null}::text))
@@ -67,24 +73,28 @@ export class PgListingRepository implements ListingRepository {
     `;
 
     const sortColumn =
-      query.sort === "created_at"
-        ? sql`created_at`
-        : query.sort === "price"
-          ? sql`price`
-          : query.sort === "mileage"
-            ? sql`mileage`
-            : sql`year`;
+      query.sort === "relevance"
+        ? sql`ts_rank(search_vector, ${textQuery})`
+        : query.sort === "created_at"
+          ? sql`created_at`
+          : query.sort === "price"
+            ? sql`price`
+            : query.sort === "mileage"
+              ? sql`mileage`
+              : sql`year`;
     const sortDirection = query.direction === "asc" ? sql`ASC` : sql`DESC`;
     const comparator = query.direction === "asc" ? sql`>` : sql`<`;
     // Bind timestamps as text so Postgres.js preserves microseconds in the cursor.
     const cursorValue = query.cursor
       ? query.sort === "created_at"
         ? sql`${query.cursor.value}::text::timestamptz`
-        : query.sort === "price"
-          ? sql`${query.cursor.value}::bigint`
-          : query.sort === "mileage"
-            ? sql`${query.cursor.value}::integer`
-            : sql`${query.cursor.value}::smallint`
+        : query.sort === "relevance"
+          ? sql`${query.cursor.value}::real`
+          : query.sort === "price"
+            ? sql`${query.cursor.value}::bigint`
+            : query.sort === "mileage"
+              ? sql`${query.cursor.value}::integer`
+              : sql`${query.cursor.value}::smallint`
       : null;
     const cursorFilter = query.cursor
       ? sql`AND (${sortColumn}, id) ${comparator} (${cursorValue}, ${query.cursor.id}::uuid)`
@@ -102,13 +112,15 @@ export class PgListingRepository implements ListingRepository {
         ORDER BY ${sortColumn} ${sortDirection}, id ${sortDirection}
         LIMIT ${query.per_page + 1}
       `,
-      sql<{ value: string; count: number }[]>`
-        SELECT make AS value, count(*)::integer AS count
-        FROM vehicle_listings
-        WHERE ${filters}
-        GROUP BY make
-        ORDER BY count DESC, value ASC
-      `,
+      query.include_facets === false
+        ? Promise.resolve([])
+        : sql<{ value: string; count: number }[]>`
+            SELECT make AS value, count(*)::integer AS count
+            FROM vehicle_listings
+            WHERE ${filters}
+            GROUP BY make
+            ORDER BY count DESC, value ASC
+          `,
     ]);
 
     return {

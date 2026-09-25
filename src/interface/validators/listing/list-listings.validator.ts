@@ -12,16 +12,26 @@ import {
   transmissionSchema,
 } from "./listing-fields.validator";
 
-const yearSchema = t.Numeric({ minimum: 1900, maximum: 2100, multipleOf: 1 });
-const priceSchema = t.Numeric({
+export const listingYearQuerySchema = t.Numeric({
+  minimum: 1900,
+  maximum: 2100,
+  multipleOf: 1,
+});
+export const listingPriceQuerySchema = t.Numeric({
   minimum: 0,
   maximum: Number.MAX_SAFE_INTEGER,
   multipleOf: 1,
 });
-const mileageSchema = t.Numeric({
+export const listingMileageQuerySchema = t.Numeric({
   minimum: 0,
   maximum: 2147483647,
   multipleOf: 1,
+});
+
+export const listingListItemSchema = t.Object({
+  ...listingResponseFields,
+  created_at: t.String({ format: "date-time" }),
+  updated_at: t.String({ format: "date-time" }),
 });
 
 export const ListListingsModel = new Elysia().model({
@@ -33,12 +43,12 @@ export const ListListingsModel = new Elysia().model({
       condition: t.Optional(conditionSchema),
       fuel_type: t.Optional(fuelTypeSchema),
       transmission: t.Optional(transmissionSchema),
-      min_year: t.Optional(yearSchema),
-      max_year: t.Optional(yearSchema),
-      min_price: t.Optional(priceSchema),
-      max_price: t.Optional(priceSchema),
-      min_mileage: t.Optional(mileageSchema),
-      max_mileage: t.Optional(mileageSchema),
+      min_year: t.Optional(listingYearQuerySchema),
+      max_year: t.Optional(listingYearQuerySchema),
+      min_price: t.Optional(listingPriceQuerySchema),
+      max_price: t.Optional(listingPriceQuerySchema),
+      min_mileage: t.Optional(listingMileageQuerySchema),
+      max_mileage: t.Optional(listingMileageQuerySchema),
       location: t.Optional(t.String({ minLength: 1 })),
       sort: t.Optional(
         t.Union([
@@ -57,13 +67,7 @@ export const ListListingsModel = new Elysia().model({
     { additionalProperties: false },
   ),
   "listing.list": paginatedSuccessSchema(
-    t.Array(
-      t.Object({
-        ...listingResponseFields,
-        created_at: t.String({ format: "date-time" }),
-        updated_at: t.String({ format: "date-time" }),
-      }),
-    ),
+    t.Array(listingListItemSchema),
     t.Object({
       make: t.Array(
         t.Object({ value: t.String(), count: t.Integer({ minimum: 0 }) }),

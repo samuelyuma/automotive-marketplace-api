@@ -16,12 +16,18 @@ import {
   decodeListingCursor,
   encodeListingCursor,
 } from "../utils/listing-cursor";
+import {
+  normalizeListingSearchTerm,
+  validateListingSearchRanges,
+} from "../utils/listing-search";
 
 export class ListingService {
   constructor(private readonly repository: ListingRepository) {}
 
   async list(
     query: ListingFilters & {
+      q?: string;
+      include_facets?: boolean;
       sort: ListingSort;
       direction: ListingDirection;
       per_page: number;
@@ -53,6 +59,31 @@ export class ListingService {
       },
       facets: result.facets,
     };
+  }
+
+  search(
+    query: ListingFilters & {
+      q?: string;
+      sort?: ListingSort;
+      direction?: ListingDirection;
+      per_page?: number;
+      cursor?: string;
+    },
+  ) {
+    validateListingSearchRanges(query);
+    const q = normalizeListingSearchTerm(query.q);
+    const sort =
+      query.sort === "relevance" && !q
+        ? "created_at"
+        : (query.sort ?? (q ? "relevance" : "created_at"));
+    return this.list({
+      ...query,
+      q,
+      sort,
+      direction: query.direction ?? "desc",
+      per_page: query.per_page ?? 20,
+      include_facets: false,
+    });
   }
 
   async getById(id: string): Promise<Listing> {

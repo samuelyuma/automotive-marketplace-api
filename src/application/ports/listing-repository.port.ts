@@ -13,7 +13,12 @@ export interface ListingRepository {
   softDelete(id: string): Promise<SoftDeletedListing | null>;
 }
 
-export type ListingSort = "created_at" | "price" | "mileage" | "year";
+export type ListingSort =
+  | "created_at"
+  | "price"
+  | "mileage"
+  | "year"
+  | "relevance";
 export type ListingDirection = "asc" | "desc";
 
 export type ListingFilters = {
@@ -36,6 +41,8 @@ export type ListingFilters = {
 export type ListingCursor = { id: string; value: string };
 
 export type ListingSearchQuery = ListingFilters & {
+  q?: string;
+  include_facets?: boolean;
   sort: ListingSort;
   direction: ListingDirection;
   per_page: number;
