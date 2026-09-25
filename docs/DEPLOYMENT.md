@@ -50,7 +50,8 @@ The root `server.ts` is the entrypoint; no Docker image is needed on Vercel.
 
 For demo data, run `bun run seed` from a trusted shell after migrations. The
 command uses the same direct Neon URL as migrations and adds 500 repeatable
-listings under demo categories. Do not run it during Vercel function startup.
+listings, 10 demo categories, and their attribute definitions. Do not run it
+during Vercel function startup.
 
 ## Rate Limiting And Checks
 
