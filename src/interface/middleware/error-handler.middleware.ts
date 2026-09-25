@@ -1,11 +1,8 @@
 import Elysia from "elysia";
 
-import { DomainError, type ErrorKind } from "@domain/errors/domain-error";
-
-import { logger } from "@infrastructure/logging/logger";
-
-import { errorResponse, standardErrors } from "@interface/http/response";
-
+import { DomainError, type ErrorKind } from "../../domain/errors/domain-error";
+import { logger } from "../../infrastructure/logging/logger";
+import { errorResponse, standardErrors } from "../http/response";
 import { requestContext } from "./request-context.middlware";
 
 const statusByKind = {

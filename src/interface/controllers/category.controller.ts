@@ -1,43 +1,40 @@
 import Elysia from "elysia";
 
-import type { CategoryRepository } from "@application/ports/category-repository.port";
-import type { ListingSearchRepository } from "@application/ports/listing-search-repository.port";
-import { CategoryService } from "@application/service/category.service";
-import { ListingSearchService } from "@application/service/listing-search.service";
-
+import type { CategoryRepository } from "../../application/ports/category-repository.port";
+import type { ListingSearchRepository } from "../../application/ports/listing-search-repository.port";
+import { CategoryService } from "../../application/service/category.service";
+import { ListingSearchService } from "../../application/service/listing-search.service";
 import type {
   CategoryDetail,
   CategoryTreeNode,
   CategoryWithAttributes,
   UpdatedCategoryWithAttributes,
-} from "@domain/entities/category";
-
-import { paginatedResponse, successResponse } from "@interface/http/response";
-import { serializeListingDetail } from "@interface/http/serialize-listing-detail";
+} from "../../domain/entities/category";
+import { PgCategoryRepository } from "../../repository/postgres/category.repository";
+import { PgListingSearchRepository } from "../../repository/postgres/listing-search.repository";
+import { paginatedResponse, successResponse } from "../http/response";
+import { serializeListingDetail } from "../http/serialize-listing-detail";
 import {
   CreateCategoryModel,
   createCategoryRouteDetail,
-} from "@interface/validators/category/create-category.validator";
+} from "../validators/category/create-category.validator";
 import {
   GetCategoryModel,
   getCategoryRouteDetail,
-} from "@interface/validators/category/get-category.validator";
-import type { CategoryTreeResponseNode } from "@interface/validators/category/list-category.validator";
+} from "../validators/category/get-category.validator";
+import type { CategoryTreeResponseNode } from "../validators/category/list-category.validator";
 import {
   ListCategoryModel,
   listCategoryRouteDetail,
-} from "@interface/validators/category/list-category.validator";
+} from "../validators/category/list-category.validator";
 import {
   UpdateCategoryModel,
   updateCategoryRouteDetail,
-} from "@interface/validators/category/update-category.validator";
+} from "../validators/category/update-category.validator";
 import {
   ListListingsModel,
   listCategoryListingsRouteDetail,
-} from "@interface/validators/listing/list-listings.validator";
-
-import { PgCategoryRepository } from "@repository/postgres/category.repository";
-import { PgListingSearchRepository } from "@repository/postgres/listing-search.repository";
+} from "../validators/listing/list-listings.validator";
 
 function serializeCategoryDetail({ category, children }: CategoryDetail) {
   return {

@@ -2,10 +2,9 @@ import type {
   FilterCount,
   FilterRepository,
   FilterStats,
-} from "@application/ports/filter-repository.port";
-
-import { sql } from "@infrastructure/postgres/client";
-
+} from "../../application/ports/filter-repository.port";
+import { sql } from "../../infrastructure/postgres/client";
+import { timedQuery } from "../../infrastructure/postgres/timed-query";
 import { categoryScopeIds } from "./category-scope";
 
 type StatsRow = {
@@ -32,7 +31,8 @@ export class PgFilterRepository implements FilterRepository {
   }
 
   private async getStats(categoryId: string | null): Promise<FilterStats> {
-    const [row] = await sql<StatsRow[]>`
+    return timedQuery("filter.getStats", "heavy", async () => {
+      const [row] = await sql<StatsRow[]>`
       WITH available AS (
         SELECT condition, fuel_type, transmission, price, year, mileage, engine_cc
         FROM vehicle_listings
@@ -61,18 +61,19 @@ export class PgFilterRepository implements FilterRepository {
         (SELECT min(engine_cc) FROM available) AS engine_cc_min,
         (SELECT max(engine_cc) FROM available) AS engine_cc_max
     `;
-    if (!row) throw new Error("Category filter query returned no row");
-    return {
-      condition: row.condition,
-      fuel_type: row.fuel_type,
-      transmission: row.transmission,
-      price: {
-        min: row.price_min === null ? null : Number(row.price_min),
-        max: row.price_max === null ? null : Number(row.price_max),
-      },
-      year: { min: row.year_min, max: row.year_max },
-      mileage: { min: row.mileage_min, max: row.mileage_max },
-      engine_cc: { min: row.engine_cc_min, max: row.engine_cc_max },
-    };
+      if (!row) throw new Error("Category filter query returned no row");
+      return {
+        condition: row.condition,
+        fuel_type: row.fuel_type,
+        transmission: row.transmission,
+        price: {
+          min: row.price_min === null ? null : Number(row.price_min),
+          max: row.price_max === null ? null : Number(row.price_max),
+        },
+        year: { min: row.year_min, max: row.year_max },
+        mileage: { min: row.mileage_min, max: row.mileage_max },
+        engine_cc: { min: row.engine_cc_min, max: row.engine_cc_max },
+      };
+    });
   }
 }

@@ -1,5 +1,4 @@
-import { env } from "@main/config/env";
-
+import { env } from "../../main/config/env";
 import { redis } from "./client";
 import { pingUpstash } from "./upstash";
 

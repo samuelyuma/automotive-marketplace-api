@@ -1,4 +1,4 @@
-import type { Listing } from "@domain/entities/listing";
+import type { Listing } from "../../domain/entities/listing";
 
 export interface ListingSearchRepository {
   list(query: ListingSearchQuery): Promise<ListingSearchResult>;

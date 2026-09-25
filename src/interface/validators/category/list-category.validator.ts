@@ -1,7 +1,6 @@
 import Elysia, { t } from "elysia";
 
-import type { CategoryAttribute } from "@domain/entities/category";
-
+import type { CategoryAttribute } from "../../../domain/entities/category";
 import { successSchema } from "../response.validator";
 import { attributeFields, categoryFields } from "./attribute.validator";
 

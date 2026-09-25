@@ -4,7 +4,7 @@ import type {
   NewCategory,
   UpdateCategory,
   UpdatedCategoryWithAttributes,
-} from "@domain/entities/category";
+} from "../../domain/entities/category";
 
 export interface CategoryRepository {
   listHierarchy(): Promise<CategoryWithAttributes[]>;

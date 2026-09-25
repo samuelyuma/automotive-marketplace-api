@@ -1,5 +1,4 @@
-import { DomainError } from "@domain/errors/domain-error";
-
+import { DomainError } from "../../domain/errors/domain-error";
 import type { ListingFilters } from "../ports/listing-search-repository.port";
 
 export class InvalidListingSearchRangeError extends DomainError {

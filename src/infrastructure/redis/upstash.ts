@@ -1,7 +1,7 @@
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 
-import { env } from "@main/config/env";
+import { env } from "../../main/config/env";
 
 const redis = env.REDIS_BACKEND === "upstash" ? Redis.fromEnv() : undefined;
 

@@ -1,4 +1,4 @@
-import { DomainError } from "@domain/errors/domain-error";
+import { DomainError } from "../../domain/errors/domain-error";
 
 export class InvalidListingSuggestionError extends DomainError {
   readonly kind = "bad_request" as const;

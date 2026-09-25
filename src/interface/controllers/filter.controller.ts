@@ -1,22 +1,20 @@
 import Elysia from "elysia";
 
-import type { CategoryRepository } from "@application/ports/category-repository.port";
-import type { FilterRepository } from "@application/ports/filter-repository.port";
-import { FilterService } from "@application/service/filter.service";
-
+import type { CategoryRepository } from "../../application/ports/category-repository.port";
+import type { FilterRepository } from "../../application/ports/filter-repository.port";
+import { FilterService } from "../../application/service/filter.service";
+import { PgCategoryRepository } from "../../repository/postgres/category.repository";
+import { PgFilterRepository } from "../../repository/postgres/filter.repository";
 import {
   errorResponse,
   standardErrors,
   successResponse,
-} from "@interface/http/response";
+} from "../http/response";
 import {
   FilterModel,
   getCategoryFiltersRouteDetail,
   getFiltersRouteDetail,
-} from "@interface/validators/filter.validator";
-
-import { PgCategoryRepository } from "@repository/postgres/category.repository";
-import { PgFilterRepository } from "@repository/postgres/filter.repository";
+} from "../validators/filter.validator";
 
 function unknownQueryError(request: Request) {
   if (new URL(request.url).searchParams.size === 0) return null;

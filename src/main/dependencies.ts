@@ -1,9 +1,8 @@
-import { logger } from "@infrastructure/logging/logger";
-import { checkDatabaseHealth } from "@infrastructure/postgres/health";
-import { connectRedis } from "@infrastructure/redis/client";
-import { checkRedisHealth } from "@infrastructure/redis/health";
-
-import { env } from "@main/config/env";
+import { logger } from "../infrastructure/logging/logger";
+import { checkDatabaseHealth } from "../infrastructure/postgres/health";
+import { connectRedis } from "../infrastructure/redis/client";
+import { checkRedisHealth } from "../infrastructure/redis/health";
+import { env } from "./config/env";
 
 export async function initDependencies(): Promise<void> {
   const dbHealthy = await checkDatabaseHealth();

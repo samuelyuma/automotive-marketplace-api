@@ -4,13 +4,11 @@ import type {
   ListingSearchResult,
   ListingSuggestion,
   ListingSuggestionQuery,
-} from "@application/ports/listing-search-repository.port";
-import { InvalidListingSearchQueryError } from "@application/utils/listing-search";
-
-import type { Listing } from "@domain/entities/listing";
-
-import { sql } from "@infrastructure/postgres/client";
-
+} from "../../application/ports/listing-search-repository.port";
+import { InvalidListingSearchQueryError } from "../../application/utils/listing-search";
+import type { Listing } from "../../domain/entities/listing";
+import { sql } from "../../infrastructure/postgres/client";
+import { timedQuery } from "../../infrastructure/postgres/timed-query";
 import { categoryScopeIds } from "./category-scope";
 
 type ListingRow = Omit<Listing, "price"> & { price: string };
@@ -25,7 +23,10 @@ export class PgListingSearchRepository implements ListingSearchRepository {
     // Escape LIKE wildcards so each keystroke is matched as literal prefix text.
     const pattern = `${query.q.replace(/[!%_]/g, "!$&")}%`;
     const type = query.type ?? null;
-    return sql<ListingSuggestion[]>`
+    return timedQuery(
+      "listing.suggest",
+      "heavy",
+      () => sql<ListingSuggestion[]>`
       WITH raw AS (
         SELECT 'make'::text AS type, make AS value
         FROM vehicle_listings
@@ -54,7 +55,8 @@ export class PgListingSearchRepository implements ListingSearchRepository {
       ORDER BY CASE type WHEN 'make' THEN 0 WHEN 'model' THEN 1 ELSE 2 END,
                lower(value), value
       LIMIT ${query.limit}
-    `;
+    `,
+    );
   }
 
   async list(query: ListingSearchQuery): Promise<ListingSearchResult> {
@@ -113,8 +115,9 @@ export class PgListingSearchRepository implements ListingSearchRepository {
       ? sql`AND (${sortColumn}, id) ${comparator} (${cursorValue}, ${query.cursor.id}::uuid)`
       : sql``;
 
-    const [rows, facetRows] = await Promise.all([
-      sql<ListingPageRow[]>`
+    const [rows, facetRows] = await timedQuery("listing.list", "heavy", () =>
+      Promise.all([
+        sql<ListingPageRow[]>`
         SELECT id, category_id, make, model, year, price, mileage,
                condition, color, location, status, image_url, fuel_type,
                transmission, engine_cc, created_at, updated_at,
@@ -126,16 +129,17 @@ export class PgListingSearchRepository implements ListingSearchRepository {
         ORDER BY ${sortColumn} ${sortDirection}, id ${sortDirection}
         LIMIT ${query.per_page + 1}
       `,
-      query.include_facets === false
-        ? Promise.resolve([])
-        : sql<{ value: string; count: number }[]>`
+        query.include_facets === false
+          ? Promise.resolve([])
+          : sql<{ value: string; count: number }[]>`
             SELECT make AS value, count(*)::integer AS count
             FROM vehicle_listings
             WHERE ${filters}
             GROUP BY make
             ORDER BY count DESC, value ASC
           `,
-    ]);
+      ]),
+    );
 
     return {
       rows: rows.map(({ cursor_value, ...row }) => ({

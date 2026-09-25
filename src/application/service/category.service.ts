@@ -5,12 +5,11 @@ import type {
   NewCategory,
   UpdateCategory,
   UpdatedCategoryWithAttributes,
-} from "@domain/entities/category";
+} from "../../domain/entities/category";
 import {
   CategoryAttributeKeyConflictError,
   CategoryNotFoundError,
-} from "@domain/errors/category-error";
-
+} from "../../domain/errors/category-error";
 import type { CategoryRepository } from "../ports/category-repository.port";
 import { buildCategoryTree } from "../utils/build-category-tree";
 

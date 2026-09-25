@@ -1,7 +1,6 @@
 import Elysia, { t } from "elysia";
 
-import { ListingNotFoundError } from "@domain/errors/listing-error";
-
+import { ListingNotFoundError } from "../../../domain/errors/listing-error";
 import {
   badRequestSchema,
   errorSchema,

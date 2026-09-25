@@ -1,8 +1,7 @@
 import postgres from "postgres";
 
-import type { CategoryRepository } from "@application/ports/category-repository.port";
-import { diffCategoryAttributes } from "@application/utils/category-attribute-diff";
-
+import type { CategoryRepository } from "../../application/ports/category-repository.port";
+import { diffCategoryAttributes } from "../../application/utils/category-attribute-diff";
 import type {
   Category,
   CategoryAttribute,
@@ -12,15 +11,15 @@ import type {
   NewCategory,
   UpdateCategory,
   UpdatedCategoryWithAttributes,
-} from "@domain/entities/category";
+} from "../../domain/entities/category";
 import {
   CategoryAttributeKeyConflictError,
   CategoryInvalidParentError,
   CategoryParentNotFoundError,
   CategorySlugConflictError,
-} from "@domain/errors/category-error";
-
-import { sql } from "@infrastructure/postgres/client";
+} from "../../domain/errors/category-error";
+import { sql } from "../../infrastructure/postgres/client";
+import { timedQuery } from "../../infrastructure/postgres/timed-query";
 
 function throwCategoryError(error: unknown): never {
   if (error instanceof postgres.PostgresError) {
@@ -79,7 +78,8 @@ type CategoryDetailRow = Category & {
 
 export class PgCategoryRepository implements CategoryRepository {
   async getWithChildren(id: string): Promise<CategoryDetail | null> {
-    const rows = await sql<CategoryDetailRow[]>`
+    return timedQuery("category.getWithChildren", "light", async () => {
+      const rows = await sql<CategoryDetailRow[]>`
       SELECT category.id, category.parent_id, category.name, category.slug,
              category.created_at, category.updated_at,
              attribute.id AS attribute_id,
@@ -95,56 +95,58 @@ export class PgCategoryRepository implements CategoryRepository {
       WHERE category.id = ${id}
       ORDER BY attribute.key
     `;
-    const first = rows[0];
-    if (!first) return null;
+      const first = rows[0];
+      if (!first) return null;
 
-    const attributes: CategoryAttribute[] = [];
-    for (const row of rows) {
-      if (row.attribute_id === null) continue;
-      if (
-        row.attribute_key === null ||
-        row.attribute_label === null ||
-        row.attribute_type === null ||
-        row.attribute_created_at === null ||
-        row.attribute_updated_at === null
-      )
-        throw new Error("Category attribute row is incomplete");
-      attributes.push({
-        id: row.attribute_id,
-        category_id: id,
-        key: row.attribute_key,
-        label: row.attribute_label,
-        type: row.attribute_type,
-        options: row.attribute_options,
-        created_at: row.attribute_created_at,
-        updated_at: row.attribute_updated_at,
-        deleted_at: null,
-      });
-    }
+      const attributes: CategoryAttribute[] = [];
+      for (const row of rows) {
+        if (row.attribute_id === null) continue;
+        if (
+          row.attribute_key === null ||
+          row.attribute_label === null ||
+          row.attribute_type === null ||
+          row.attribute_created_at === null ||
+          row.attribute_updated_at === null
+        )
+          throw new Error("Category attribute row is incomplete");
+        attributes.push({
+          id: row.attribute_id,
+          category_id: id,
+          key: row.attribute_key,
+          label: row.attribute_label,
+          type: row.attribute_type,
+          options: row.attribute_options,
+          created_at: row.attribute_created_at,
+          updated_at: row.attribute_updated_at,
+          deleted_at: null,
+        });
+      }
 
-    const children = await sql<Category[]>`
+      const children = await sql<Category[]>`
       SELECT id, parent_id, name, slug, created_at, updated_at
       FROM categories
       WHERE parent_id = ${id}
       ORDER BY name, id
     `;
 
-    return {
-      category: {
-        id: first.id,
-        parent_id: first.parent_id,
-        name: first.name,
-        slug: first.slug,
-        created_at: first.created_at,
-        updated_at: first.updated_at,
-        attributes,
-      },
-      children,
-    };
+      return {
+        category: {
+          id: first.id,
+          parent_id: first.parent_id,
+          name: first.name,
+          slug: first.slug,
+          created_at: first.created_at,
+          updated_at: first.updated_at,
+          attributes,
+        },
+        children,
+      };
+    });
   }
 
   async listHierarchy(): Promise<CategoryWithAttributes[]> {
-    const rows = await sql<CategoryHierarchyRow[]>`
+    return timedQuery("category.listHierarchy", "heavy", async () => {
+      const rows = await sql<CategoryHierarchyRow[]>`
       WITH RECURSIVE category_tree AS (
         SELECT c.id, c.parent_id, c.name, c.slug, c.created_at, c.updated_at,
                ARRAY[c.id] AS path
@@ -179,96 +181,100 @@ export class PgCategoryRepository implements CategoryRepository {
       ORDER BY tree.id, attribute.key
     `;
 
-    const categories = new Map<string, CategoryWithAttributes>();
-    for (const row of rows) {
-      if (row.total_categories !== row.reachable_categories)
-        throw new Error("Category hierarchy contains an unreachable cycle");
-      if (row.id === null) continue;
-      if (
-        row.name === null ||
-        row.slug === null ||
-        row.created_at === null ||
-        row.updated_at === null
-      )
-        throw new Error("Category hierarchy row is incomplete");
-
-      let category = categories.get(row.id);
-      if (!category) {
-        category = {
-          id: row.id,
-          parent_id: row.parent_id,
-          name: row.name,
-          slug: row.slug,
-          created_at: row.created_at,
-          updated_at: row.updated_at,
-          attributes: [],
-        };
-        categories.set(row.id, category);
-      }
-      if (row.attribute_id !== null) {
+      const categories = new Map<string, CategoryWithAttributes>();
+      for (const row of rows) {
+        if (row.total_categories !== row.reachable_categories)
+          throw new Error("Category hierarchy contains an unreachable cycle");
+        if (row.id === null) continue;
         if (
-          row.attribute_key === null ||
-          row.attribute_label === null ||
-          row.attribute_type === null ||
-          row.attribute_created_at === null ||
-          row.attribute_updated_at === null
+          row.name === null ||
+          row.slug === null ||
+          row.created_at === null ||
+          row.updated_at === null
         )
-          throw new Error("Category attribute row is incomplete");
-        category.attributes.push({
-          id: row.attribute_id,
-          category_id: row.id,
-          key: row.attribute_key,
-          label: row.attribute_label,
-          type: row.attribute_type,
-          options: row.attribute_options,
-          created_at: row.attribute_created_at,
-          updated_at: row.attribute_updated_at,
-          deleted_at: null,
-        });
+          throw new Error("Category hierarchy row is incomplete");
+
+        let category = categories.get(row.id);
+        if (!category) {
+          category = {
+            id: row.id,
+            parent_id: row.parent_id,
+            name: row.name,
+            slug: row.slug,
+            created_at: row.created_at,
+            updated_at: row.updated_at,
+            attributes: [],
+          };
+          categories.set(row.id, category);
+        }
+        if (row.attribute_id !== null) {
+          if (
+            row.attribute_key === null ||
+            row.attribute_label === null ||
+            row.attribute_type === null ||
+            row.attribute_created_at === null ||
+            row.attribute_updated_at === null
+          )
+            throw new Error("Category attribute row is incomplete");
+          category.attributes.push({
+            id: row.attribute_id,
+            category_id: row.id,
+            key: row.attribute_key,
+            label: row.attribute_label,
+            type: row.attribute_type,
+            options: row.attribute_options,
+            created_at: row.attribute_created_at,
+            updated_at: row.attribute_updated_at,
+            deleted_at: null,
+          });
+        }
       }
-    }
-    return [...categories.values()];
+      return [...categories.values()];
+    });
   }
 
   async create(data: NewCategory): Promise<CategoryWithAttributes> {
-    try {
-      return await sql.begin(async (tx) => {
-        const [category] = await tx<Category[]>`
+    return timedQuery("category.create", "light", async () => {
+      try {
+        return await sql.begin(async (tx) => {
+          const [category] = await tx<Category[]>`
           INSERT INTO categories (parent_id, name, slug)
           VALUES (${data.parent_id ?? null}, ${data.name}, ${data.slug})
           RETURNING id, parent_id, name, slug, created_at, updated_at
         `;
 
-        if (!category) throw new Error("Category insert returned no row");
-        for (const attribute of data.attributes ?? []) {
-          await tx`
+          if (!category) throw new Error("Category insert returned no row");
+          for (const attribute of data.attributes ?? []) {
+            await tx`
             INSERT INTO attribute_definitions (category_id, key, label, type, options)
             VALUES (${category.id}, ${attribute.key}, ${attribute.label}, ${attribute.type}, ${attribute.options == null ? null : tx.array(attribute.options, 25)})
           `;
-        }
+          }
 
-        const attributes = await tx<CategoryAttribute[]>`
+          const attributes = await tx<CategoryAttribute[]>`
           SELECT id, category_id, key, label, type, options, created_at, updated_at, deleted_at
           FROM attribute_definitions WHERE category_id = ${category.id} AND deleted_at IS NULL
           ORDER BY key
         `;
-        return { ...category, attributes };
-      });
-    } catch (error) {
-      throwCategoryError(error);
-    }
+          return { ...category, attributes };
+        });
+      } catch (error) {
+        throwCategoryError(error);
+      }
+    });
   }
 
   async update(
     id: string,
     data: UpdateCategory,
   ): Promise<UpdatedCategoryWithAttributes | null> {
-    try {
-      return await sql.begin(async (tx) => {
-        if (typeof data.parent_id === "string") {
-          // Serialize parent moves so two concurrent updates cannot create a cycle.
-          await tx`SELECT pg_advisory_xact_lock(724331, 1)`;
-          const [cycle] = await tx`
+    return timedQuery("category.update", "light", async () => {
+      try {
+        return await sql.begin(async (tx) => {
+          if (typeof data.parent_id === "string") {
+            // Serialize parent moves so two concurrent updates cannot create a cycle.
+            await tx`SELECT pg_advisory_xact_lock(724331, 1)`;
+            const [cycle] = await tx`
             WITH RECURSIVE descendants AS (
               SELECT id FROM categories WHERE id = ${id}
               UNION
@@ -277,9 +283,9 @@ export class PgCategoryRepository implements CategoryRepository {
             )
             SELECT 1 FROM descendants WHERE id = ${data.parent_id}::uuid
           `;
-          if (cycle) throw new CategoryInvalidParentError();
-        }
-        const [category] = await tx<Category[]>`
+            if (cycle) throw new CategoryInvalidParentError();
+          }
+          const [category] = await tx<Category[]>`
           UPDATE categories
           SET parent_id = CASE WHEN ${data.parent_id !== undefined} THEN ${data.parent_id ?? null}::uuid ELSE parent_id END,
               name = COALESCE(${data.name ?? null}, name),
@@ -288,27 +294,27 @@ export class PgCategoryRepository implements CategoryRepository {
           WHERE id = ${id}
           RETURNING id, parent_id, name, slug, created_at, updated_at
         `;
-        if (!category) return null;
+          if (!category) return null;
 
-        const deletedAttributes: DeletedCategoryAttribute[] = [];
-        if (data.attributes !== undefined) {
-          const existing = await tx<CategoryAttribute[]>`
+          const deletedAttributes: DeletedCategoryAttribute[] = [];
+          if (data.attributes !== undefined) {
+            const existing = await tx<CategoryAttribute[]>`
             SELECT id, category_id, key, label, type, options, created_at, updated_at, deleted_at
             FROM attribute_definitions WHERE category_id = ${id} AND deleted_at IS NULL
           `;
-          const diff = diffCategoryAttributes(existing, data.attributes);
+            const diff = diffCategoryAttributes(existing, data.attributes);
 
-          for (const key of diff.remove) {
-            const [deleted] = await tx<DeletedCategoryAttribute[]>`
+            for (const key of diff.remove) {
+              const [deleted] = await tx<DeletedCategoryAttribute[]>`
               UPDATE attribute_definitions
               SET deleted_at = now(), updated_at = now()
               WHERE category_id = ${id} AND key = ${key} AND deleted_at IS NULL
               RETURNING id, deleted_at
             `;
-            if (deleted) deletedAttributes.push(deleted);
-          }
-          for (const attribute of diff.update) {
-            await tx`
+              if (deleted) deletedAttributes.push(deleted);
+            }
+            for (const attribute of diff.update) {
+              await tx`
               UPDATE attribute_definitions
               SET label = ${attribute.label},
                   type = ${attribute.type},
@@ -316,28 +322,29 @@ export class PgCategoryRepository implements CategoryRepository {
                   updated_at = now()
               WHERE category_id = ${id} AND key = ${attribute.key} AND deleted_at IS NULL
             `;
-          }
-          for (const attribute of diff.insert) {
-            await tx`
+            }
+            for (const attribute of diff.insert) {
+              await tx`
               INSERT INTO attribute_definitions (category_id, key, label, type, options)
               VALUES (${id}, ${attribute.key}, ${attribute.label}, ${attribute.type}, ${attribute.options == null ? null : tx.array(attribute.options, 25)})
             `;
+            }
           }
-        }
 
-        const attributes = await tx<CategoryAttribute[]>`
+          const attributes = await tx<CategoryAttribute[]>`
           SELECT id, category_id, key, label, type, options, created_at, updated_at, deleted_at
           FROM attribute_definitions WHERE category_id = ${id} AND deleted_at IS NULL
           ORDER BY key
         `;
-        return {
-          ...category,
-          attributes,
-          deleted_attributes: deletedAttributes,
-        };
-      });
-    } catch (error) {
-      throwCategoryError(error);
-    }
+          return {
+            ...category,
+            attributes,
+            deleted_attributes: deletedAttributes,
+          };
+        });
+      } catch (error) {
+        throwCategoryError(error);
+      }
+    });
   }
 }

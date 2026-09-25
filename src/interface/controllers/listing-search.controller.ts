@@ -1,21 +1,19 @@
 import Elysia from "elysia";
 
-import type { ListingSearchRepository } from "@application/ports/listing-search-repository.port";
-import { ListingSearchService } from "@application/service/listing-search.service";
-import { InvalidListingSearchQueryError } from "@application/utils/listing-search";
-
-import { paginatedResponse, successResponse } from "@interface/http/response";
-import { serializeListingDetail } from "@interface/http/serialize-listing-detail";
+import type { ListingSearchRepository } from "../../application/ports/listing-search-repository.port";
+import { ListingSearchService } from "../../application/service/listing-search.service";
+import { InvalidListingSearchQueryError } from "../../application/utils/listing-search";
+import { PgListingSearchRepository } from "../../repository/postgres/listing-search.repository";
+import { paginatedResponse, successResponse } from "../http/response";
+import { serializeListingDetail } from "../http/serialize-listing-detail";
 import {
   SearchListingsModel,
   searchListingsRouteDetail,
-} from "@interface/validators/listing-search.validator";
+} from "../validators/listing-search.validator";
 import {
   SuggestListingsModel,
   suggestListingsRouteDetail,
-} from "@interface/validators/listing-suggest.validator";
-
-import { PgListingSearchRepository } from "@repository/postgres/listing-search.repository";
+} from "../validators/listing-suggest.validator";
 
 const searchQueryKeys = new Set([
   "q",

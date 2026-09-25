@@ -1,12 +1,11 @@
-import type { CategoryRepository } from "@application/ports/category-repository.port";
+import type { CategoryAttribute } from "../../domain/entities/category";
+import { CategoryNotFoundError } from "../../domain/errors/category-error";
+import type { CategoryRepository } from "../ports/category-repository.port";
 import type {
   FilterCount,
   FilterRepository,
   FilterStats,
-} from "@application/ports/filter-repository.port";
-
-import type { CategoryAttribute } from "@domain/entities/category";
-import { CategoryNotFoundError } from "@domain/errors/category-error";
+} from "../ports/filter-repository.port";
 
 const conditionValues = ["NEW", "USED", "CERTIFIED"];
 const fuelTypeValues = ["PETROL", "DIESEL", "HYBRID", "ELECTRIC"];

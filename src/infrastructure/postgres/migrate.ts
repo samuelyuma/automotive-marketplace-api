@@ -3,7 +3,7 @@ import { Glob } from "bun";
 
 import postgres from "postgres";
 
-import { env } from "@main/config/env";
+import { env } from "../../main/config/env";
 
 export function migrationConnectionUrl(config: {
   DATABASE_URL: string;

@@ -4,8 +4,7 @@ import {
   CategoryInvalidParentError,
   CategoryNotFoundError,
   CategoryParentNotFoundError,
-} from "@domain/errors/category-error";
-
+} from "../../../domain/errors/category-error";
 import { errorSchema, successSchema } from "../response.validator";
 import {
   categoryAttributeInputSchema,

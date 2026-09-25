@@ -1,4 +1,4 @@
-import { sql } from "@infrastructure/postgres/client";
+import { sql } from "../../infrastructure/postgres/client";
 
 export function categoryScopeIds(categoryId: string) {
   return sql`

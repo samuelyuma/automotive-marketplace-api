@@ -3,7 +3,7 @@ import type {
   NewListing,
   SoftDeletedListing,
   UpdateListing,
-} from "@domain/entities/listing";
+} from "../../domain/entities/listing";
 
 export interface ListingRepository {
   getById(id: string): Promise<Listing | null>;

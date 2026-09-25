@@ -1,8 +1,7 @@
 import { Elysia } from "elysia";
 
-import { logger } from "@infrastructure/logging/logger";
-
-import { errorResponse } from "@interface/http/response";
+import { logger } from "../../infrastructure/logging/logger";
+import { errorResponse } from "../http/response";
 
 type Bucket = "read" | "write";
 type LimitResult = { success: boolean; reset: number };

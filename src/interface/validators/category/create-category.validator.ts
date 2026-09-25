@@ -4,8 +4,7 @@ import {
   CategoryAttributeKeyConflictError,
   CategoryParentNotFoundError,
   CategorySlugConflictError,
-} from "@domain/errors/category-error";
-
+} from "../../../domain/errors/category-error";
 import {
   badRequestSchema,
   errorSchema,

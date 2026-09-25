@@ -1,7 +1,6 @@
 import Elysia, { t } from "elysia";
 
-import { CategoryNotFoundError } from "@domain/errors/category-error";
-
+import { CategoryNotFoundError } from "../../domain/errors/category-error";
 import {
   badRequestSchema,
   errorSchema,

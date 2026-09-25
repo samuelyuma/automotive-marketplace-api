@@ -1,6 +1,6 @@
 import { type TSchema, t } from "elysia";
 
-import { errorResponse, standardErrors } from "@interface/http/response";
+import { errorResponse, standardErrors } from "../http/response";
 
 export const successSchema = <T extends TSchema>(data: T) =>
   t.Object({

@@ -3,9 +3,8 @@ import type {
   NewListing,
   SoftDeletedListing,
   UpdateListing,
-} from "@domain/entities/listing";
-import { ListingNotFoundError } from "@domain/errors/listing-error";
-
+} from "../../domain/entities/listing";
+import { ListingNotFoundError } from "../../domain/errors/listing-error";
 import type { ListingRepository } from "../ports/listing-repository.port";
 
 export class ListingService {

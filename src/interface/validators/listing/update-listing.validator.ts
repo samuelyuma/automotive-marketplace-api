@@ -3,8 +3,7 @@ import Elysia, { t } from "elysia";
 import {
   ListingCategoryNotFoundError,
   ListingNotFoundError,
-} from "@domain/errors/listing-error";
-
+} from "../../../domain/errors/listing-error";
 import { errorSchema, successSchema } from "../response.validator";
 import {
   fuelTypeSchema,

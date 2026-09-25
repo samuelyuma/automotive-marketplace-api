@@ -1,5 +1,4 @@
-import { DomainError } from "@domain/errors/domain-error";
-
+import { DomainError } from "../../domain/errors/domain-error";
 import type {
   ListingCursor,
   ListingDirection,
