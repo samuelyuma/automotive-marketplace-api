@@ -1,0 +1,104 @@
+Enum listing_conditions {
+  NEW
+  USED
+  CERTIFIED
+}
+
+Enum listing_statuses {
+  AVAILABLE
+  PENDING
+  SOLD
+  REMOVED
+}
+
+Enum fuel_types {
+  PETROL
+  DIESEL
+  HYBRID
+  ELECTRIC
+}
+
+Enum transmissions {
+  MANUAL
+  AUTOMATIC
+}
+
+Enum attribute_types {
+  ENUM
+  RANGE
+  BOOLEAN
+}
+
+Table categories {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  parent_id uuid [ref: > categories.id]
+  name text [not null]
+  slug text [not null, unique]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  checks {
+    `parent_id <> id` [name: 'categories_not_self_parent']
+  }
+
+  indexes {
+    parent_id [name: 'idx_categories_parent']
+  }
+}
+
+Table vehicle_listings {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  category_id uuid [not null, ref: > categories.id]
+  make text [not null]
+  model text [not null]
+  year smallint [not null]
+  price bigint [not null, note: 'Integer amount; currency is not represented']
+  mileage integer [not null]
+  condition listing_conditions [not null]
+  color text [not null]
+  location text [not null]
+  status listing_statuses [not null, default: 'AVAILABLE']
+  image_url text
+  fuel_type fuel_types
+  transmission transmissions
+  engine_cc integer
+  search_vector tsvector [note: 'Stored generated vector from make, model, and location using the simple text configuration; indexed with PostgreSQL GIN as idx_listings_search']
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  checks {
+    `year BETWEEN 1900 AND 2100` [name: 'listings_year_range']
+    `price >= 0` [name: 'listings_price_nonneg']
+    `mileage >= 0` [name: 'listings_mileage_nonneg']
+  }
+
+  indexes {
+    category_id [name: 'idx_listings_category']
+    (status, make, year, price) [name: 'idx_listings_filter']
+    mileage [name: 'idx_listings_mileage']
+    (category_id, fuel_type) [name: 'idx_listings_fuel']
+    (created_at, id) [name: 'idx_listings_created', note: 'PostgreSQL order is created_at DESC, id DESC']
+    (`lower(make)`) [name: 'idx_listings_make_prefix', note: 'Partial PostgreSQL text_pattern_ops index where status = AVAILABLE']
+    (`lower(model)`) [name: 'idx_listings_model_prefix', note: 'Partial PostgreSQL text_pattern_ops index where status = AVAILABLE']
+    (`lower(location)`) [name: 'idx_listings_location_prefix', note: 'Partial PostgreSQL text_pattern_ops index where status = AVAILABLE']
+    (status, price, id) [name: 'idx_listings_price_id']
+    (status, year, id) [name: 'idx_listings_year_id']
+    (status, mileage, id) [name: 'idx_listings_mileage_id']
+  }
+}
+
+Table attribute_definitions {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  category_id uuid [not null, ref: > categories.id]
+  key text [not null]
+  label text [not null]
+  type attribute_types [not null]
+  options text[]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+  deleted_at timestamptz
+
+  indexes {
+    (category_id, key) [name: 'attribute_definitions_active_category_key', note: 'Partial PostgreSQL unique index where deleted_at IS NULL']
+  }
+}

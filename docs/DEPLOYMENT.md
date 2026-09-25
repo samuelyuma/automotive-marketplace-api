@@ -32,7 +32,7 @@ Set it only in the trusted environment that runs migrations, alongside
 `DATABASE_URL`; the Vercel function does not need it. Local migrations still
 use `DATABASE_URL` when `DATABASE_URL_UNPOOLED` is absent.
 
-## Apply Migrations And Deploy
+## Apply Migrations and Deploy
 
 Run migrations once against the target Neon database before directing API
 traffic to it:
@@ -49,11 +49,11 @@ repository as a Vercel project using the Bun runtime set in `vercel.json`.
 The root `server.ts` is the entrypoint; no Docker image is needed on Vercel.
 
 For demo data, run `bun run seed` from a trusted shell after migrations. The
-command uses the same direct Neon URL as migrations and adds 500 repeatable
-listings, 10 demo categories, and their attribute definitions. Do not run it
-during Vercel function startup.
+command uses the same direct Neon URL as migrations and creates 500 repeatable
+listings across nine vehicle categories in a 10-category tree, along with
+their attribute definitions. Do not run it during Vercel function startup.
 
-## Rate Limiting And Checks
+## Rate Limiting and Checks
 
 Upstash enforces separate per-client-IP sliding windows across all function
 instances: 60 GET/HEAD requests per minute and 10 other requests per minute.
@@ -70,3 +70,13 @@ separately against local services.
 Vercel's firewall handles traffic before functions run; application rate
 limiting limits requests that reach the API. The write routes intentionally
 remain public, so callers can modify data within their quota.
+
+## Verify the Public Deployment
+
+The root README lists the production base URL and links to its API docs. Check
+`/health-check`, `/docs`, and `/docs/json` on that public host. Make a read
+request against seeded data and confirm that search returns a response without
+relying on local services.
+
+Use test data for write checks. Listing and category write routes are public,
+so do not send real seller or customer data to this deployment.
