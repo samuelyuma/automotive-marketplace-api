@@ -33,7 +33,7 @@ export class PgFilterRepository implements FilterRepository {
   private async getStats(categoryId: string | null): Promise<FilterStats> {
     return timedQuery("filter.getStats", "heavy", async () => {
       const [row] = await sql<StatsRow[]>`
-      WITH available AS (
+      WITH available AS MATERIALIZED (
         SELECT condition, fuel_type, transmission, price, year, mileage, engine_cc
         FROM vehicle_listings
         WHERE status = 'AVAILABLE'

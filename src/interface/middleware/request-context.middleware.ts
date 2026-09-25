@@ -1,5 +1,7 @@
 import { Elysia } from "elysia";
 
+import { startRequestLogContext } from "../../infrastructure/logging/request-log-context";
+
 type RequestContextValues = {
   requestId: string;
   durationMs: () => number;
@@ -10,6 +12,8 @@ export const requestContext = new Elysia({ name: "request-context" })
     const startedAt = performance.now();
     const requestId =
       context.request.headers.get("x-request-id") ?? crypto.randomUUID();
+
+    startRequestLogContext(requestId);
 
     Object.assign(context, {
       requestId,

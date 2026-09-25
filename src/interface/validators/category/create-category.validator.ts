@@ -11,6 +11,7 @@ import {
   internalErrorSchema,
   successSchema,
 } from "../response.validator";
+import { databaseUuidSchema } from "../uuid.validator";
 import {
   categoryAttributeInputSchema,
   createdCategoryResponseSchema,
@@ -19,7 +20,7 @@ import {
 export const CreateCategoryModel = new Elysia().model({
   "category.create.body": t.Object(
     {
-      parent_id: t.Optional(t.Nullable(t.String({ format: "uuid" }))),
+      parent_id: t.Optional(t.Nullable(databaseUuidSchema)),
       name: t.String({ minLength: 1 }),
       slug: t.String({ minLength: 1 }),
       attributes: t.Optional(t.Array(categoryAttributeInputSchema)),

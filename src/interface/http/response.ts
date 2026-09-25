@@ -7,8 +7,6 @@ export type SuccessResponse<T = undefined> = {
 export type PaginationMeta = {
   per_page: number;
   next_cursor: string | null;
-  prev_cursor?: string | null;
-  total_records?: number;
 };
 
 export type ErrorDetail = { field: string; issue: string };

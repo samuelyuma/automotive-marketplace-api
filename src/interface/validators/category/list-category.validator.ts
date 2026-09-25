@@ -1,7 +1,7 @@
 import Elysia, { t } from "elysia";
 
 import type { CategoryAttribute } from "../../../domain/entities/category";
-import { successSchema } from "../response.validator";
+import { successSchema, withTimestamps } from "../response.validator";
 import { attributeFields, categoryFields } from "./attribute.validator";
 
 export type CategoryTreeResponseNode = {
@@ -28,14 +28,10 @@ const categoryTreeNodeSchema = t.Unsafe<CategoryTreeResponseNode>(
   t.Recursive(
     (Self) =>
       t.Object({
-        ...categoryFields,
-        created_at: t.String({ format: "date-time" }),
-        updated_at: t.String({ format: "date-time" }),
+        ...withTimestamps(categoryFields, "created_at", "updated_at"),
         attributes: t.Array(
           t.Object({
-            ...attributeFields,
-            created_at: t.String({ format: "date-time" }),
-            updated_at: t.String({ format: "date-time" }),
+            ...withTimestamps(attributeFields, "created_at", "updated_at"),
           }),
         ),
         children: t.Array(Self),

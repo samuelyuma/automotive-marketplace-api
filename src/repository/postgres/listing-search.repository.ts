@@ -1,18 +1,51 @@
+import type postgres from "postgres";
+
 import type {
   ListingSearchQuery,
   ListingSearchRepository,
   ListingSearchResult,
+  ListingSort,
   ListingSuggestion,
   ListingSuggestionQuery,
 } from "../../application/ports/listing-search-repository.port";
-import { InvalidListingSearchQueryError } from "../../application/utils/listing-search";
 import type { Listing } from "../../domain/entities/listing";
+import { InvalidListingSearchQueryError } from "../../domain/errors/listing-error";
 import { sql } from "../../infrastructure/postgres/client";
 import { timedQuery } from "../../infrastructure/postgres/timed-query";
 import { categoryScopeIds } from "./category-scope";
 
 type ListingRow = Omit<Listing, "price"> & { price: string };
 type ListingPageRow = ListingRow & { cursor_value: string };
+type SqlFragment = postgres.Fragment;
+
+const sortStrategies: Record<
+  ListingSort,
+  {
+    column: (textQuery: SqlFragment | null) => SqlFragment;
+    castCursor: (value: string) => SqlFragment;
+  }
+> = {
+  relevance: {
+    column: (textQuery) => sql`ts_rank(search_vector, ${textQuery})`,
+    castCursor: (value) => sql`${value}::real`,
+  },
+  created_at: {
+    column: () => sql`created_at`,
+    castCursor: (value) => sql`${value}::text::timestamptz`,
+  },
+  price: {
+    column: () => sql`price`,
+    castCursor: (value) => sql`${value}::bigint`,
+  },
+  mileage: {
+    column: () => sql`mileage`,
+    castCursor: (value) => sql`${value}::integer`,
+  },
+  year: {
+    column: () => sql`year`,
+    castCursor: (value) => sql`${value}::smallint`,
+  },
+};
 
 function toListing(row: ListingRow): Listing {
   return { ...row, price: Number(row.price) };
@@ -87,29 +120,12 @@ export class PgListingSearchRepository implements ListingSearchRepository {
     `;
     const makeFilter = sql`AND (${query.make ?? null}::text IS NULL OR lower(make) = lower(${query.make ?? null}::text))`;
 
-    const sortColumn =
-      query.sort === "relevance"
-        ? sql`ts_rank(search_vector, ${textQuery})`
-        : query.sort === "created_at"
-          ? sql`created_at`
-          : query.sort === "price"
-            ? sql`price`
-            : query.sort === "mileage"
-              ? sql`mileage`
-              : sql`year`;
+    const strategy = sortStrategies[query.sort];
+    const sortColumn = strategy.column(textQuery);
     const sortDirection = query.direction === "asc" ? sql`ASC` : sql`DESC`;
     const comparator = query.direction === "asc" ? sql`>` : sql`<`;
-    // Bind timestamps as text so Postgres.js preserves microseconds in the cursor.
     const cursorValue = query.cursor
-      ? query.sort === "created_at"
-        ? sql`${query.cursor.value}::text::timestamptz`
-        : query.sort === "relevance"
-          ? sql`${query.cursor.value}::real`
-          : query.sort === "price"
-            ? sql`${query.cursor.value}::bigint`
-            : query.sort === "mileage"
-              ? sql`${query.cursor.value}::integer`
-              : sql`${query.cursor.value}::smallint`
+      ? strategy.castCursor(query.cursor.value)
       : null;
     const cursorFilter = query.cursor
       ? sql`AND (${sortColumn}, id) ${comparator} (${cursorValue}, ${query.cursor.id}::uuid)`

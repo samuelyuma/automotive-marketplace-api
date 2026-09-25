@@ -3,7 +3,7 @@ import Elysia from "elysia";
 import { DomainError, type ErrorKind } from "../../domain/errors/domain-error";
 import { logger } from "../../infrastructure/logging/logger";
 import { errorResponse, standardErrors } from "../http/response";
-import { requestContext } from "./request-context.middlware";
+import { requestContext } from "./request-context.middleware";
 
 const statusByKind = {
   not_found: 404,
@@ -54,6 +54,39 @@ export const errorHandler = new Elysia({ name: "error-handler" })
           field: e.path?.replace(/^\//, "") || "(root)",
           issue: e.message,
         }));
+        if (error.type === "response") {
+          logger.error(
+            {
+              ...base,
+              http_status: 500,
+              error_code: standardErrors.internal.code,
+              validation_source: error.type,
+              validation_details: details,
+              invalid_ids: error.all
+                ?.filter((e) => /(?:^|\/)id$/.test(e.path ?? ""))
+                .slice(0, 5)
+                .map((e) => String(e.value)),
+            },
+            "response validation failed",
+          );
+          return status(
+            500,
+            errorResponse(
+              standardErrors.internal.code,
+              standardErrors.internal.message,
+            ),
+          );
+        }
+        logger.warn(
+          {
+            ...base,
+            http_status: 400,
+            error_code: standardErrors.validation.code,
+            validation_source: error.type,
+            validation_details: details,
+          },
+          "request validation failed",
+        );
         return status(
           400,
           errorResponse(
@@ -64,7 +97,11 @@ export const errorHandler = new Elysia({ name: "error-handler" })
         );
       }
 
-      if (code === "PARSE")
+      if (code === "PARSE") {
+        logger.warn(
+          { ...base, http_status: 400, error_code: standardErrors.parse.code },
+          "request parse failed",
+        );
         return status(
           400,
           errorResponse(
@@ -72,8 +109,17 @@ export const errorHandler = new Elysia({ name: "error-handler" })
             standardErrors.parse.message,
           ),
         );
+      }
 
-      if (code === "NOT_FOUND")
+      if (code === "NOT_FOUND") {
+        logger.warn(
+          {
+            ...base,
+            http_status: 404,
+            error_code: standardErrors.notFound.code,
+          },
+          "route not found",
+        );
         return status(
           404,
           errorResponse(
@@ -81,6 +127,7 @@ export const errorHandler = new Elysia({ name: "error-handler" })
             standardErrors.notFound.message,
           ),
         );
+      }
 
       logger.error(
         { ...base, http_status: 500, exception: error },

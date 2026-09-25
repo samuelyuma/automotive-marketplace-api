@@ -1,22 +1,15 @@
 import Elysia from "elysia";
 
-import type { CachePort } from "../../application/ports/cache.port";
-import type { CategoryRepository } from "../../application/ports/category-repository.port";
-import type { ListingSearchRepository } from "../../application/ports/listing-search-repository.port";
-import { CategoryService } from "../../application/service/category.service";
-import { ListingSearchService } from "../../application/service/listing-search.service";
-import type {
-  CategoryDetail,
-  CategoryTreeNode,
-  CategoryWithAttributes,
-  UpdatedCategoryWithAttributes,
-} from "../../domain/entities/category";
-import { RedisCache } from "../../infrastructure/redis/cache";
-import { PgCategoryRepository } from "../../repository/postgres/category.repository";
-import { PgListingSearchRepository } from "../../repository/postgres/listing-search.repository";
+import type { Container } from "../../main/container";
 import { cachedRead, invalidateReadCache } from "../http/read-cache";
 import { paginatedResponse, successResponse } from "../http/response";
-import { serializeListingDetail } from "../http/serialize-listing-detail";
+import {
+  toCategoryDetail,
+  toCategoryTree,
+  toCreatedCategory,
+  toUpdatedCategory,
+} from "../presenters/category.presenter";
+import { toListingDetail } from "../presenters/listing.presenter";
 import {
   CreateCategoryModel,
   createCategoryRouteDetail,
@@ -25,7 +18,6 @@ import {
   GetCategoryModel,
   getCategoryRouteDetail,
 } from "../validators/category/get-category.validator";
-import type { CategoryTreeResponseNode } from "../validators/category/list-category.validator";
 import {
   ListCategoryModel,
   listCategoryRouteDetail,
@@ -39,111 +31,11 @@ import {
   listCategoryListingsRouteDetail,
 } from "../validators/listing/list-listings.validator";
 
-function serializeCategoryDetail({ category, children }: CategoryDetail) {
-  return {
-    id: category.id,
-    parent_id: category.parent_id,
-    name: category.name,
-    slug: category.slug,
-    created_at: category.created_at.toISOString(),
-    updated_at: category.updated_at.toISOString(),
-    attributes: category.attributes.map((attribute) => ({
-      id: attribute.id,
-      category_id: attribute.category_id,
-      key: attribute.key,
-      label: attribute.label,
-      type: attribute.type,
-      options: attribute.options,
-      created_at: attribute.created_at.toISOString(),
-      updated_at: attribute.updated_at.toISOString(),
-    })),
-    children: children.map((child) => ({
-      id: child.id,
-      parent_id: child.parent_id,
-      name: child.name,
-      slug: child.slug,
-      created_at: child.created_at.toISOString(),
-      updated_at: child.updated_at.toISOString(),
-    })),
-  };
-}
-
-function serializeTree(
-  categories: CategoryTreeNode[],
-): CategoryTreeResponseNode[] {
-  return categories.map((category) => ({
-    id: category.id,
-    parent_id: category.parent_id,
-    name: category.name,
-    slug: category.slug,
-    created_at: category.created_at.toISOString(),
-    updated_at: category.updated_at.toISOString(),
-    attributes: category.attributes.map((attribute) => ({
-      id: attribute.id,
-      category_id: attribute.category_id,
-      key: attribute.key,
-      label: attribute.label,
-      type: attribute.type,
-      options: attribute.options,
-      created_at: attribute.created_at.toISOString(),
-      updated_at: attribute.updated_at.toISOString(),
-    })),
-    children: serializeTree(category.children),
-  }));
-}
-
-function serializeCreatedCategory(category: CategoryWithAttributes) {
-  return {
-    id: category.id,
-    parent_id: category.parent_id,
-    name: category.name,
-    slug: category.slug,
-    created_at: category.created_at.toISOString(),
-    attributes: category.attributes.map((attribute) => ({
-      id: attribute.id,
-      category_id: attribute.category_id,
-      key: attribute.key,
-      label: attribute.label,
-      type: attribute.type,
-      options: attribute.options,
-      created_at: attribute.created_at.toISOString(),
-    })),
-  };
-}
-
-function serializeUpdatedCategory(category: UpdatedCategoryWithAttributes) {
-  return {
-    id: category.id,
-    parent_id: category.parent_id,
-    name: category.name,
-    slug: category.slug,
-    updated_at: category.updated_at.toISOString(),
-    attributes: [
-      ...category.attributes.map((attribute) => ({
-        id: attribute.id,
-        category_id: attribute.category_id,
-        key: attribute.key,
-        label: attribute.label,
-        type: attribute.type,
-        options: attribute.options,
-        updated_at: attribute.updated_at.toISOString(),
-      })),
-      ...category.deleted_attributes.map((attribute) => ({
-        id: attribute.id,
-        deleted_at: attribute.deleted_at.toISOString(),
-      })),
-    ],
-  };
-}
-
-export function createCategoryController(
-  repository: CategoryRepository = new PgCategoryRepository(),
-  listingRepository: ListingSearchRepository = new PgListingSearchRepository(),
-  cache?: CachePort,
-) {
-  const categoryService = new CategoryService(repository);
-  const listingSearchService = new ListingSearchService(listingRepository);
-
+export function createCategoryController({
+  cache,
+  categoryService,
+  listingSearchService,
+}: Container) {
   return new Elysia({ prefix: "/categories" })
     .use(CreateCategoryModel)
     .use(GetCategoryModel)
@@ -153,11 +45,15 @@ export function createCategoryController(
     .get(
       "",
       async ({ request }) =>
-        cachedRead(cache, request, async () =>
-          successResponse(
-            serializeTree(await categoryService.listTree()),
-            "Categories retrieved",
-          ),
+        cachedRead(
+          cache,
+          request,
+          async () =>
+            successResponse(
+              toCategoryTree(await categoryService.listTree()),
+              "Categories retrieved",
+            ),
+          { resource: "categories", ttlSeconds: 300 },
         ),
       {
         response: {
@@ -170,22 +66,27 @@ export function createCategoryController(
     .get(
       "/:id/listings",
       async ({ params, query, request }) =>
-        cachedRead(cache, request, async () => {
-          await categoryService.getWithChildren(params.id);
-          const page = await listingSearchService.list({
-            ...query,
-            scope_category_id: params.id,
-            sort: query.sort ?? "created_at",
-            direction: query.direction ?? "desc",
-            per_page: query.per_page ?? 20,
-          });
-          return paginatedResponse(
-            page.data.map(serializeListingDetail),
-            "Listings retrieved",
-            page.meta,
-            page.facets,
-          );
-        }),
+        cachedRead(
+          cache,
+          request,
+          async () => {
+            await categoryService.getWithChildren(params.id);
+            const page = await listingSearchService.list({
+              ...query,
+              scope_category_id: params.id,
+              sort: query.sort ?? "created_at",
+              direction: query.direction ?? "desc",
+              per_page: query.per_page ?? 20,
+            });
+            return paginatedResponse(
+              page.data.map(toListingDetail),
+              "Listings retrieved",
+              page.meta,
+              page.facets,
+            );
+          },
+          { resource: ["categories", "listings"], ttlSeconds: 60 },
+        ),
       {
         params: "category.detail.params",
         query: "listing.list.query",
@@ -201,13 +102,17 @@ export function createCategoryController(
     .get(
       "/:id",
       async ({ params, request }) =>
-        cachedRead(cache, request, async () =>
-          successResponse(
-            serializeCategoryDetail(
-              await categoryService.getWithChildren(params.id),
+        cachedRead(
+          cache,
+          request,
+          async () =>
+            successResponse(
+              toCategoryDetail(
+                await categoryService.getWithChildren(params.id),
+              ),
+              "Category retrieved",
             ),
-            "Category retrieved",
-          ),
+          { resource: "categories", ttlSeconds: 300 },
         ),
       {
         params: "category.detail.params",
@@ -227,13 +132,10 @@ export function createCategoryController(
           ...body,
           parent_id: body.parent_id ?? null,
         });
-        await invalidateReadCache(cache);
+        await invalidateReadCache(cache, ["categories", "filters", "listings"]);
         return status(
           201,
-          successResponse(
-            serializeCreatedCategory(category),
-            "Category created",
-          ),
+          successResponse(toCreatedCategory(category), "Category created"),
         );
       },
       {
@@ -252,11 +154,8 @@ export function createCategoryController(
       "/:id",
       async ({ params, body }) => {
         const category = await categoryService.update(params.id, body);
-        await invalidateReadCache(cache);
-        return successResponse(
-          serializeUpdatedCategory(category),
-          "Category updated",
-        );
+        await invalidateReadCache(cache, ["categories", "filters", "listings"]);
+        return successResponse(toUpdatedCategory(category), "Category updated");
       },
       {
         params: "category.update.params",
@@ -273,9 +172,3 @@ export function createCategoryController(
       },
     );
 }
-
-export const categoryController = createCategoryController(
-  undefined,
-  undefined,
-  new RedisCache(),
-);

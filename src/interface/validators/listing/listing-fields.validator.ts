@@ -1,5 +1,7 @@
 import { t } from "elysia";
 
+import { databaseUuidSchema } from "../uuid.validator";
+
 export const conditionSchema = t.Union([
   t.Literal("NEW"),
   t.Literal("USED"),
@@ -23,7 +25,7 @@ export const transmissionSchema = t.Union([
 ]);
 
 export const listingFields = {
-  category_id: t.String({ format: "uuid" }),
+  category_id: databaseUuidSchema,
   make: t.String({ minLength: 1 }),
   model: t.String({ minLength: 1 }),
   year: t.Integer({ minimum: 1900, maximum: 2100 }),
@@ -35,7 +37,7 @@ export const listingFields = {
 };
 
 export const listingResponseFields = {
-  id: t.String({ format: "uuid" }),
+  id: databaseUuidSchema,
   ...listingFields,
   status: statusSchema,
   image_url: t.Nullable(t.String()),

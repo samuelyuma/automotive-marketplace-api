@@ -1,15 +1,20 @@
 import Elysia, { t } from "elysia";
 
-import { successSchema } from "../response.validator";
+import { successSchema, withTimestamps } from "../response.validator";
+import { databaseUuidSchema } from "../uuid.validator";
 
 export const DeleteListingModel = new Elysia().model({
-  "listing.delete.params": t.Object({ id: t.String({ format: "uuid" }) }),
+  "listing.delete.params": t.Object({ id: databaseUuidSchema }),
   "listing.deleted": successSchema(
-    t.Object({
-      id: t.String({ format: "uuid" }),
-      status: t.Literal("REMOVED"),
-      updated_at: t.String({ format: "date-time" }),
-    }),
+    t.Object(
+      withTimestamps(
+        {
+          id: databaseUuidSchema,
+          status: t.Literal("REMOVED"),
+        },
+        "updated_at",
+      ),
+    ),
   ),
 });
 

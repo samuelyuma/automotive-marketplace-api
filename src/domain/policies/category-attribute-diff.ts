@@ -1,7 +1,7 @@
 import type {
   CategoryAttribute,
   NewCategoryAttribute,
-} from "../../domain/entities/category";
+} from "../entities/category";
 
 type ExistingAttribute = Pick<
   CategoryAttribute,

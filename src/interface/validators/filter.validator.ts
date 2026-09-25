@@ -7,6 +7,7 @@ import {
   internalErrorSchema,
   successSchema,
 } from "./response.validator";
+import { databaseUuidSchema } from "./uuid.validator";
 
 const filterCountSchema = t.Array(
   t.Object({
@@ -19,7 +20,7 @@ const filterRangeSchema = t.Object({
   max: t.Nullable(t.Number()),
 });
 const attributeBase = {
-  id: t.String({ format: "uuid" }),
+  id: databaseUuidSchema,
   key: t.String(),
   label: t.String(),
 };
@@ -39,12 +40,12 @@ export const FilterModel = new Elysia().model({
   "filter.list.bad_request": badRequestSchema,
   "filter.list.internal_error": internalErrorSchema,
   "filter.category.params": t.Object({
-    categoryId: t.String({ format: "uuid" }),
+    categoryId: databaseUuidSchema,
   }),
   "filter.category.query": t.Object({}, { additionalProperties: false }),
   "filter.category": successSchema(
     t.Object({
-      category_id: t.String({ format: "uuid" }),
+      category_id: databaseUuidSchema,
       condition: filterCountSchema,
       fuel_type: filterCountSchema,
       transmission: filterCountSchema,

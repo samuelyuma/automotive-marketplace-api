@@ -1,7 +1,7 @@
 import type {
   CategoryTreeNode,
   CategoryWithAttributes,
-} from "../../domain/entities/category";
+} from "../entities/category";
 
 export function buildCategoryTree(
   categories: CategoryWithAttributes[],

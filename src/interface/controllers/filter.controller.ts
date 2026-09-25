@@ -1,12 +1,6 @@
 import Elysia from "elysia";
 
-import type { CachePort } from "../../application/ports/cache.port";
-import type { CategoryRepository } from "../../application/ports/category-repository.port";
-import type { FilterRepository } from "../../application/ports/filter-repository.port";
-import { FilterService } from "../../application/service/filter.service";
-import { RedisCache } from "../../infrastructure/redis/cache";
-import { PgCategoryRepository } from "../../repository/postgres/category.repository";
-import { PgFilterRepository } from "../../repository/postgres/filter.repository";
+import type { Container } from "../../main/container";
 import { cachedRead } from "../http/read-cache";
 import {
   errorResponse,
@@ -28,12 +22,7 @@ function unknownQueryError(request: Request) {
   );
 }
 
-export function createFilterController(
-  categoryRepository: CategoryRepository = new PgCategoryRepository(),
-  filterRepository: FilterRepository = new PgFilterRepository(),
-  cache?: CachePort,
-) {
-  const service = new FilterService(categoryRepository, filterRepository);
+export function createFilterController({ cache, filterService }: Container) {
   return new Elysia({ prefix: "/filters" })
     .use(FilterModel)
     .get(
@@ -41,8 +30,15 @@ export function createFilterController(
       async ({ request, status }) => {
         const error = unknownQueryError(request);
         if (error) return status(400, error);
-        return cachedRead(cache, request, async () =>
-          successResponse(await service.getGlobal(), "Filters retrieved"),
+        return cachedRead(
+          cache,
+          request,
+          async () =>
+            successResponse(
+              await filterService.getGlobal(),
+              "Filters retrieved",
+            ),
+          { resource: ["filters", "listings"], ttlSeconds: 300 },
         );
       },
       {
@@ -60,11 +56,15 @@ export function createFilterController(
       async ({ params, request, status }) => {
         const error = unknownQueryError(request);
         if (error) return status(400, error);
-        return cachedRead(cache, request, async () =>
-          successResponse(
-            await service.getForCategory(params.categoryId),
-            "Category filters retrieved",
-          ),
+        return cachedRead(
+          cache,
+          request,
+          async () =>
+            successResponse(
+              await filterService.getForCategory(params.categoryId),
+              "Category filters retrieved",
+            ),
+          { resource: ["filters", "categories", "listings"], ttlSeconds: 300 },
         );
       },
       {
@@ -80,9 +80,3 @@ export function createFilterController(
       },
     );
 }
-
-export const filterController = createFilterController(
-  undefined,
-  undefined,
-  new RedisCache(),
-);

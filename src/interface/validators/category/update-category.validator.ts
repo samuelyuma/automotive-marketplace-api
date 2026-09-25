@@ -6,16 +6,17 @@ import {
   CategoryParentNotFoundError,
 } from "../../../domain/errors/category-error";
 import { errorSchema, successSchema } from "../response.validator";
+import { databaseUuidSchema } from "../uuid.validator";
 import {
   categoryAttributeInputSchema,
   updatedCategoryResponseSchema,
 } from "./attribute.validator";
 
 export const UpdateCategoryModel = new Elysia().model({
-  "category.update.params": t.Object({ id: t.String({ format: "uuid" }) }),
+  "category.update.params": t.Object({ id: databaseUuidSchema }),
   "category.update.body": t.Object(
     {
-      parent_id: t.Optional(t.Nullable(t.String({ format: "uuid" }))),
+      parent_id: t.Optional(t.Nullable(databaseUuidSchema)),
       name: t.Optional(t.String({ minLength: 1 })),
       slug: t.Optional(t.String({ minLength: 1 })),
       attributes: t.Optional(t.Array(categoryAttributeInputSchema)),

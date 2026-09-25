@@ -7,6 +7,7 @@ export const logger = createPinoLogger({
   messageKey: "message",
   timestamp: () => `,"timestamp":"${new Date().toISOString()}"`,
   serializers: {
+    params: () => "[REDACTED]",
     exception: (err: Error) => ({
       type: err.name,
       message: err.message,

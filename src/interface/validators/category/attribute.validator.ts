@@ -1,5 +1,8 @@
 import { t } from "elysia";
 
+import { withTimestamps } from "../response.validator";
+import { databaseUuidSchema } from "../uuid.validator";
+
 export const categoryAttributeInputSchema = t.Object(
   {
     key: t.String({ minLength: 1 }),
@@ -15,15 +18,15 @@ export const categoryAttributeInputSchema = t.Object(
 );
 
 export const categoryFields = {
-  id: t.String({ format: "uuid" }),
-  parent_id: t.Nullable(t.String({ format: "uuid" })),
+  id: databaseUuidSchema,
+  parent_id: t.Nullable(databaseUuidSchema),
   name: t.String(),
   slug: t.String(),
 };
 
 export const attributeFields = {
-  id: t.String({ format: "uuid" }),
-  category_id: t.String({ format: "uuid" }),
+  id: databaseUuidSchema,
+  category_id: databaseUuidSchema,
   key: t.String(),
   label: t.String(),
   type: t.Union([t.Literal("ENUM"), t.Literal("RANGE"), t.Literal("BOOLEAN")]),
@@ -31,27 +34,23 @@ export const attributeFields = {
 };
 
 export const createdCategoryResponseSchema = t.Object({
-  ...categoryFields,
-  created_at: t.String({ format: "date-time" }),
+  ...withTimestamps(categoryFields, "created_at"),
   attributes: t.Array(
     t.Object({
-      ...attributeFields,
-      created_at: t.String({ format: "date-time" }),
+      ...withTimestamps(attributeFields, "created_at"),
     }),
   ),
 });
 
 export const updatedCategoryResponseSchema = t.Object({
-  ...categoryFields,
-  updated_at: t.String({ format: "date-time" }),
+  ...withTimestamps(categoryFields, "updated_at"),
   attributes: t.Array(
     t.Union([
       t.Object({
-        ...attributeFields,
-        updated_at: t.String({ format: "date-time" }),
+        ...withTimestamps(attributeFields, "updated_at"),
       }),
       t.Object({
-        id: t.String({ format: "uuid" }),
+        id: databaseUuidSchema,
         deleted_at: t.String({ format: "date-time" }),
       }),
     ]),

@@ -1,6 +1,6 @@
-import { logger } from "@infrastructure/logging/logger";
-
-import { env } from "@main/config/env";
+import { env } from "../../main/config/env";
+import { logger } from "../logging/logger";
+import { requestLogFields } from "../logging/request-log-context";
 
 const dbLogger = logger.child({ module: "database" });
 
@@ -25,11 +25,20 @@ export async function timedQuery<T>(
 
     if (duration_ms > threshold_ms) {
       dbLogger.warn(
-        { query: label, weight, duration_ms, threshold_ms },
+        {
+          ...requestLogFields(),
+          query: label,
+          weight,
+          duration_ms,
+          threshold_ms,
+        },
         "slow query detected",
       );
     } else if (env.LOG_LEVEL === "debug") {
-      dbLogger.debug({ query: label, weight, duration_ms }, "query completed");
+      dbLogger.debug(
+        { ...requestLogFields(), query: label, weight, duration_ms },
+        "query completed",
+      );
     }
   }
 }

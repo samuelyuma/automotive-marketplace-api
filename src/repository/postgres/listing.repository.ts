@@ -10,6 +10,7 @@ import type {
 import { ListingCategoryNotFoundError } from "../../domain/errors/listing-error";
 import { sql } from "../../infrastructure/postgres/client";
 import { timedQuery } from "../../infrastructure/postgres/timed-query";
+import { CONSTRAINTS } from "./constraint-names";
 
 type ListingRow = Omit<Listing, "price"> & { price: string };
 
@@ -21,7 +22,7 @@ function throwListingError(error: unknown): never {
   if (
     error instanceof postgres.PostgresError &&
     error.code === "23503" &&
-    error.constraint_name === "vehicle_listings_category_id_fkey"
+    error.constraint_name === CONSTRAINTS.listingCategoryFk
   )
     throw new ListingCategoryNotFoundError();
   throw error;

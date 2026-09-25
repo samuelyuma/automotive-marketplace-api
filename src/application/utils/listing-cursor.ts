@@ -1,25 +1,10 @@
-import { DomainError } from "../../domain/errors/domain-error";
+import { InvalidListingCursorError } from "../../domain/errors/listing-error";
+import { databaseUuidPattern } from "../../domain/uuid";
 import type {
   ListingCursor,
   ListingDirection,
   ListingSort,
 } from "../ports/listing-search-repository.port";
-
-export class InvalidListingCursorError extends DomainError {
-  readonly kind = "bad_request" as const;
-  readonly code = "VALIDATION_ERROR";
-  override readonly details = [
-    { field: "cursor", issue: "Invalid listing cursor" },
-  ];
-
-  constructor() {
-    super("Request validation failed");
-    this.name = "InvalidListingCursorError";
-  }
-}
-
-const uuidPattern =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export function encodeListingCursor(
   sort: ListingSort,
@@ -48,7 +33,7 @@ export function decodeListingCursor(
       value.sort !== sort ||
       value.direction !== direction ||
       typeof value.id !== "string" ||
-      !uuidPattern.test(value.id) ||
+      !databaseUuidPattern.test(value.id) ||
       typeof value.value !== "string"
     )
       throw new Error();

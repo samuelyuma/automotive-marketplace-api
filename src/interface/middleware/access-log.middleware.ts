@@ -1,7 +1,7 @@
 import { Elysia } from "elysia";
 
 import { logger } from "../../infrastructure/logging/logger";
-import { requestContext } from "./request-context.middlware";
+import { requestContext } from "./request-context.middleware";
 
 export const accessLog = new Elysia({ name: "access-log" })
   .use(requestContext)

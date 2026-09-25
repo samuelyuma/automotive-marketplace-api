@@ -1,14 +1,10 @@
 import Elysia from "elysia";
 
-import type { CachePort } from "../../application/ports/cache.port";
-import type { ListingSearchRepository } from "../../application/ports/listing-search-repository.port";
-import { ListingSearchService } from "../../application/service/listing-search.service";
-import { InvalidListingSearchQueryError } from "../../application/utils/listing-search";
-import { RedisCache } from "../../infrastructure/redis/cache";
-import { PgListingSearchRepository } from "../../repository/postgres/listing-search.repository";
+import { InvalidListingSearchQueryError } from "../../domain/errors/listing-error";
+import type { Container } from "../../main/container";
 import { cachedRead } from "../http/read-cache";
 import { paginatedResponse, successResponse } from "../http/response";
-import { serializeListingDetail } from "../http/serialize-listing-detail";
+import { toListingDetail } from "../presenters/listing.presenter";
 import {
   SearchListingsModel,
   searchListingsRouteDetail,
@@ -40,12 +36,10 @@ const searchQueryKeys = new Set([
 ]);
 const suggestQueryKeys = new Set(["q", "type", "limit"]);
 
-export function createListingSearchController(
-  repository: ListingSearchRepository = new PgListingSearchRepository(),
-  cache?: CachePort,
-) {
-  const searchService = new ListingSearchService(repository);
-
+export function createListingSearchController({
+  cache,
+  listingSearchService,
+}: Container) {
   return new Elysia({ prefix: "/listings/search" })
     .use(SearchListingsModel)
     .use(SuggestListingsModel)
@@ -57,11 +51,15 @@ export function createListingSearchController(
         );
         if (unknown !== undefined)
           throw new InvalidListingSearchQueryError(unknown);
-        return cachedRead(cache, request, async () =>
-          successResponse(
-            await searchService.suggest(query),
-            "Suggestions retrieved",
-          ),
+        return cachedRead(
+          cache,
+          request,
+          async () =>
+            successResponse(
+              await listingSearchService.suggest(query),
+              "Suggestions retrieved",
+            ),
+          { resource: "listings", ttlSeconds: 60 },
         );
       },
       {
@@ -82,33 +80,38 @@ export function createListingSearchController(
         );
         if (unknown !== undefined)
           throw new InvalidListingSearchQueryError(unknown);
-        return cachedRead(cache, request, async () => {
-          const page = await searchService.search({
-            q: query.q,
-            category_id: query.category_id,
-            make: query.make,
-            model: query.model,
-            condition: query.condition,
-            fuel_type: query.fuel_type,
-            transmission: query.transmission,
-            min_price: query.price_min,
-            max_price: query.price_max,
-            min_year: query.year_min,
-            max_year: query.year_max,
-            min_mileage: query.mileage_min,
-            max_mileage: query.mileage_max,
-            location: query.location,
-            sort: query.sort,
-            direction: query.direction,
-            per_page: query.per_page,
-            cursor: query.cursor,
-          });
-          return paginatedResponse(
-            page.data.map(serializeListingDetail),
-            "Listings found",
-            page.meta,
-          );
-        });
+        return cachedRead(
+          cache,
+          request,
+          async () => {
+            const page = await listingSearchService.search({
+              q: query.q,
+              category_id: query.category_id,
+              make: query.make,
+              model: query.model,
+              condition: query.condition,
+              fuel_type: query.fuel_type,
+              transmission: query.transmission,
+              min_price: query.price_min,
+              max_price: query.price_max,
+              min_year: query.year_min,
+              max_year: query.year_max,
+              min_mileage: query.mileage_min,
+              max_mileage: query.mileage_max,
+              location: query.location,
+              sort: query.sort,
+              direction: query.direction,
+              per_page: query.per_page,
+              cursor: query.cursor,
+            });
+            return paginatedResponse(
+              page.data.map(toListingDetail),
+              "Listings found",
+              page.meta,
+            );
+          },
+          { resource: "listings", ttlSeconds: 60 },
+        );
       },
       {
         query: "listing.search.query",
@@ -121,8 +124,3 @@ export function createListingSearchController(
       },
     );
 }
-
-export const listingSearchController = createListingSearchController(
-  undefined,
-  new RedisCache(),
-);

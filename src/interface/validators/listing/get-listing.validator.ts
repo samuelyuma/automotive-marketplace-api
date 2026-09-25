@@ -6,17 +6,15 @@ import {
   errorSchema,
   internalErrorSchema,
   successSchema,
+  withTimestamps,
 } from "../response.validator";
+import { databaseUuidSchema } from "../uuid.validator";
 import { listingResponseFields } from "./listing-fields.validator";
 
 export const GetListingModel = new Elysia().model({
-  "listing.detail.params": t.Object({ id: t.String({ format: "uuid" }) }),
+  "listing.detail.params": t.Object({ id: databaseUuidSchema }),
   "listing.detail": successSchema(
-    t.Object({
-      ...listingResponseFields,
-      created_at: t.String({ format: "date-time" }),
-      updated_at: t.String({ format: "date-time" }),
-    }),
+    t.Object(withTimestamps(listingResponseFields, "created_at", "updated_at")),
   ),
   "listing.detail.bad_request": badRequestSchema,
   "listing.detail.not_found": errorSchema(new ListingNotFoundError()),

@@ -17,12 +17,13 @@ import {
   paginationMetaSchema,
   successSchema,
 } from "./response.validator";
+import { databaseUuidSchema } from "./uuid.validator";
 
 export const SearchListingsModel = new Elysia().model({
   "listing.search.query": t.Object(
     {
       q: t.Optional(t.String({ maxLength: 200 })),
-      category_id: t.Optional(t.String({ format: "uuid" })),
+      category_id: t.Optional(databaseUuidSchema),
       make: t.Optional(t.String({ minLength: 1 })),
       model: t.Optional(t.String({ minLength: 1 })),
       condition: t.Optional(conditionSchema),
@@ -48,7 +49,7 @@ export const SearchListingsModel = new Elysia().model({
       per_page: t.Optional(
         t.Numeric({ minimum: 1, maximum: 100, multipleOf: 1 }),
       ),
-      cursor: t.Optional(t.String({ minLength: 1 })),
+      cursor: t.Optional(t.String({ minLength: 1, maxLength: 512 })),
     },
     { additionalProperties: false },
   ),

@@ -10,8 +10,8 @@ import {
   CategoryAttributeKeyConflictError,
   CategoryNotFoundError,
 } from "../../domain/errors/category-error";
+import { buildCategoryTree } from "../../domain/policies/category-tree";
 import type { CategoryRepository } from "../ports/category-repository.port";
-import { buildCategoryTree } from "../utils/build-category-tree";
 
 export class CategoryService {
   constructor(private readonly repository: CategoryRepository) {}

@@ -1,7 +1,6 @@
 import postgres from "postgres";
 
 import type { CategoryRepository } from "../../application/ports/category-repository.port";
-import { diffCategoryAttributes } from "../../application/utils/category-attribute-diff";
 import type {
   Category,
   CategoryAttribute,
@@ -18,30 +17,32 @@ import {
   CategoryParentNotFoundError,
   CategorySlugConflictError,
 } from "../../domain/errors/category-error";
+import { diffCategoryAttributes } from "../../domain/policies/category-attribute-diff";
 import { sql } from "../../infrastructure/postgres/client";
 import { timedQuery } from "../../infrastructure/postgres/timed-query";
+import { CONSTRAINTS } from "./constraint-names";
 
 function throwCategoryError(error: unknown): never {
   if (error instanceof postgres.PostgresError) {
     if (
       error.code === "23505" &&
-      error.constraint_name === "categories_slug_key"
+      error.constraint_name === CONSTRAINTS.categorySlugUnique
     )
       throw new CategorySlugConflictError();
     if (
       error.code === "23505" &&
-      (error.constraint_name === "attribute_definitions_category_key" ||
-        error.constraint_name === "attribute_definitions_active_category_key")
+      (error.constraint_name === CONSTRAINTS.categoryAttributeKeyUnique ||
+        error.constraint_name === CONSTRAINTS.categoryAttributeActiveKeyUnique)
     )
       throw new CategoryAttributeKeyConflictError();
     if (
       error.code === "23503" &&
-      error.constraint_name === "categories_parent_id_fkey"
+      error.constraint_name === CONSTRAINTS.categoryParentFk
     )
       throw new CategoryParentNotFoundError();
     if (
       error.code === "23514" &&
-      error.constraint_name === "categories_not_self_parent"
+      error.constraint_name === CONSTRAINTS.categoryNotSelfParent
     )
       throw new CategoryInvalidParentError();
   }

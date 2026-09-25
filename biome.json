@@ -39,30 +39,7 @@
             "groups": [
               [":BUN:", ":NODE:"],
               ":BLANK_LINE:",
-              [
-                ":PACKAGE:",
-                ":PACKAGE_WITH_PROTOCOL:",
-                ":URL:",
-                "!@application/**",
-                "!@domain/**",
-                "!@infrastructure/**",
-                "!@interface/**",
-                "!@main/**",
-                "!@repository/**",
-                ":ALIAS:"
-              ],
-              ":BLANK_LINE:",
-              "@application/**",
-              ":BLANK_LINE:",
-              "@domain/**",
-              ":BLANK_LINE:",
-              "@infrastructure/**",
-              ":BLANK_LINE:",
-              "@interface/**",
-              ":BLANK_LINE:",
-              "@main/**",
-              ":BLANK_LINE:",
-              "@repository/**",
+              [":PACKAGE:", ":PACKAGE_WITH_PROTOCOL:", ":URL:", ":ALIAS:"],
               ":BLANK_LINE:",
               [":PATH:"]
             ]

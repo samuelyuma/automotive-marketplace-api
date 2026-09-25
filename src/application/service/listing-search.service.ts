@@ -1,3 +1,7 @@
+import {
+  InvalidListingSearchRangeError,
+  InvalidListingSuggestionError,
+} from "../../domain/errors/listing-error";
 import type {
   ListingDirection,
   ListingFilters,
@@ -9,11 +13,13 @@ import {
   decodeListingCursor,
   encodeListingCursor,
 } from "../utils/listing-cursor";
-import {
-  normalizeListingSearchTerm,
-  validateListingSearchRanges,
-} from "../utils/listing-search";
-import { InvalidListingSuggestionError } from "../utils/listing-suggestion";
+import { normalizeListingSearchTerm } from "../utils/listing-search";
+
+const listingSearchRanges = [
+  ["min_price", "max_price"],
+  ["min_year", "max_year"],
+  ["min_mileage", "max_mileage"],
+] as const;
 
 export class ListingSearchService {
   constructor(private readonly repository: ListingSearchRepository) {}
@@ -64,7 +70,12 @@ export class ListingSearchService {
       cursor?: string;
     },
   ) {
-    validateListingSearchRanges(query);
+    for (const [min, max] of listingSearchRanges) {
+      const lower = query[min];
+      const upper = query[max];
+      if (lower !== undefined && upper !== undefined && lower > upper)
+        throw new InvalidListingSearchRangeError(max, min);
+    }
     const q = normalizeListingSearchTerm(query.q);
     const sort =
       query.sort === "relevance" && !q

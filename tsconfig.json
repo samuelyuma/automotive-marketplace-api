@@ -17,16 +17,7 @@
     "skipLibCheck": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
-    "noImplicitOverride": true,
-
-    "paths": {
-      "@application/*": ["./src/application/*"],
-      "@domain/*": ["./src/domain/*"],
-      "@infrastructure/*": ["./src/infrastructure/*"],
-      "@interface/*": ["./src/interface/*"],
-      "@main/*": ["./src/main/*"],
-      "@repository/*": ["./src/repository/*"],
-    }
+    "noImplicitOverride": true
   },
   "include": ["src", "server.ts"]
 }

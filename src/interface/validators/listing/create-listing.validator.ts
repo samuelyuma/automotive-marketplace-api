@@ -6,6 +6,7 @@ import {
   errorSchema,
   internalErrorSchema,
   successSchema,
+  withTimestamps,
 } from "../response.validator";
 import {
   fuelTypeSchema,
@@ -28,10 +29,7 @@ export const CreateListingModel = new Elysia().model({
     { additionalProperties: false },
   ),
   "listing.created": successSchema(
-    t.Object({
-      ...listingResponseFields,
-      created_at: t.String({ format: "date-time" }),
-    }),
+    t.Object(withTimestamps(listingResponseFields, "created_at")),
   ),
   "listing.bad_request": badRequestSchema,
   "listing.category_not_found": errorSchema(new ListingCategoryNotFoundError()),

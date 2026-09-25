@@ -2,6 +2,24 @@ import { type TSchema, t } from "elysia";
 
 import { errorResponse, standardErrors } from "../http/response";
 
+type TimestampKey = "created_at" | "updated_at";
+
+export function withTimestamps<
+  const T extends Record<string, TSchema>,
+  const K extends readonly TimestampKey[],
+>(
+  fields: T,
+  ...keys: K
+): T & { [key in K[number]]: ReturnType<typeof t.String> } {
+  return Object.assign(
+    {},
+    fields,
+    Object.fromEntries(
+      keys.map((key) => [key, t.String({ format: "date-time" })]),
+    ),
+  ) as T & { [key in K[number]]: ReturnType<typeof t.String> };
+}
+
 export const successSchema = <T extends TSchema>(data: T) =>
   t.Object({
     success: t.Literal(true),
@@ -12,8 +30,6 @@ export const successSchema = <T extends TSchema>(data: T) =>
 export const paginationMetaSchema = t.Object({
   per_page: t.Integer({ minimum: 1 }),
   next_cursor: t.Nullable(t.String()),
-  prev_cursor: t.Optional(t.Nullable(t.String())),
-  total_records: t.Optional(t.Integer({ minimum: 0 })),
 });
 
 export const paginatedSuccessSchema = <D extends TSchema, F extends TSchema>(

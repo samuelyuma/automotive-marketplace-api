@@ -1,17 +1,13 @@
 import Elysia from "elysia";
 
-import type { CachePort } from "../../application/ports/cache.port";
-import type { ListingRepository } from "../../application/ports/listing-repository.port";
-import type { ListingSearchRepository } from "../../application/ports/listing-search-repository.port";
-import { ListingService } from "../../application/service/listing.service";
-import { ListingSearchService } from "../../application/service/listing-search.service";
-import type { Listing } from "../../domain/entities/listing";
-import { RedisCache } from "../../infrastructure/redis/cache";
-import { PgListingRepository } from "../../repository/postgres/listing.repository";
-import { PgListingSearchRepository } from "../../repository/postgres/listing-search.repository";
+import type { Container } from "../../main/container";
 import { cachedRead, invalidateReadCache } from "../http/read-cache";
 import { paginatedResponse, successResponse } from "../http/response";
-import { serializeListingDetail } from "../http/serialize-listing-detail";
+import {
+  toCreatedListing,
+  toListingDetail,
+  toUpdatedListing,
+} from "../presenters/listing.presenter";
 import {
   CreateListingModel,
   createListingRouteDetail,
@@ -33,48 +29,11 @@ import {
   updateListingRouteDetail,
 } from "../validators/listing/update-listing.validator";
 
-function serializeListingFields(listing: Listing) {
-  return {
-    id: listing.id,
-    category_id: listing.category_id,
-    make: listing.make,
-    model: listing.model,
-    year: listing.year,
-    price: listing.price,
-    mileage: listing.mileage,
-    condition: listing.condition,
-    color: listing.color,
-    location: listing.location,
-    status: listing.status,
-    image_url: listing.image_url,
-    fuel_type: listing.fuel_type,
-    transmission: listing.transmission,
-    engine_cc: listing.engine_cc,
-  };
-}
-
-function serializeCreatedListing(listing: Listing) {
-  return {
-    ...serializeListingFields(listing),
-    created_at: listing.created_at.toISOString(),
-  };
-}
-
-function serializeUpdatedListing(listing: Listing) {
-  return {
-    ...serializeListingFields(listing),
-    updated_at: listing.updated_at.toISOString(),
-  };
-}
-
-export function createListingController(
-  repository: ListingRepository = new PgListingRepository(),
-  searchRepository: ListingSearchRepository = new PgListingSearchRepository(),
-  cache?: CachePort,
-) {
-  const listingService = new ListingService(repository, cache);
-  const searchService = new ListingSearchService(searchRepository);
-
+export function createListingController({
+  cache,
+  listingService,
+  listingSearchService,
+}: Container) {
   return new Elysia({ prefix: "/listings" })
     .use(CreateListingModel)
     .use(UpdateListingModel)
@@ -84,20 +43,25 @@ export function createListingController(
     .get(
       "",
       async ({ query, request }) =>
-        cachedRead(cache, request, async () => {
-          const page = await searchService.list({
-            ...query,
-            sort: query.sort ?? "created_at",
-            direction: query.direction ?? "desc",
-            per_page: query.per_page ?? 20,
-          });
-          return paginatedResponse(
-            page.data.map(serializeListingDetail),
-            "Listings retrieved",
-            page.meta,
-            page.facets,
-          );
-        }),
+        cachedRead(
+          cache,
+          request,
+          async () => {
+            const page = await listingSearchService.list({
+              ...query,
+              sort: query.sort ?? "created_at",
+              direction: query.direction ?? "desc",
+              per_page: query.per_page ?? 20,
+            });
+            return paginatedResponse(
+              page.data.map(toListingDetail),
+              "Listings retrieved",
+              page.meta,
+              page.facets,
+            );
+          },
+          { resource: "listings", ttlSeconds: 60 },
+        ),
       {
         query: "listing.list.query",
         response: {
@@ -112,7 +76,7 @@ export function createListingController(
       "/:id",
       async ({ params }) =>
         successResponse(
-          serializeListingDetail(await listingService.getById(params.id)),
+          toListingDetail(await listingService.getById(params.id)),
           "Listing retrieved",
         ),
       {
@@ -130,10 +94,10 @@ export function createListingController(
       "",
       async ({ body, status }) => {
         const listing = await listingService.create(body);
-        await invalidateReadCache(cache);
+        await invalidateReadCache(cache, ["listings"]);
         return status(
           201,
-          successResponse(serializeCreatedListing(listing), "Listing created"),
+          successResponse(toCreatedListing(listing), "Listing created"),
         );
       },
       {
@@ -151,11 +115,8 @@ export function createListingController(
       "/:id",
       async ({ params, body }) => {
         const listing = await listingService.update(params.id, body);
-        await invalidateReadCache(cache);
-        return successResponse(
-          serializeUpdatedListing(listing),
-          "Listing updated",
-        );
+        await invalidateReadCache(cache, ["listings"]);
+        return successResponse(toUpdatedListing(listing), "Listing updated");
       },
       {
         params: "listing.update.params",
@@ -174,7 +135,7 @@ export function createListingController(
       "/:id",
       async ({ params }) => {
         const listing = await listingService.softDelete(params.id);
-        await invalidateReadCache(cache);
+        await invalidateReadCache(cache, ["listings"]);
         return successResponse(
           {
             id: listing.id,
@@ -196,9 +157,3 @@ export function createListingController(
       },
     );
 }
-
-export const listingController = createListingController(
-  undefined,
-  undefined,
-  new RedisCache(),
-);

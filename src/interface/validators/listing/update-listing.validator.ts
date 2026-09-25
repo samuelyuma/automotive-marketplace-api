@@ -4,7 +4,12 @@ import {
   ListingCategoryNotFoundError,
   ListingNotFoundError,
 } from "../../../domain/errors/listing-error";
-import { errorSchema, successSchema } from "../response.validator";
+import {
+  errorSchema,
+  successSchema,
+  withTimestamps,
+} from "../response.validator";
+import { databaseUuidSchema } from "../uuid.validator";
 import {
   fuelTypeSchema,
   listingFields,
@@ -13,7 +18,7 @@ import {
 } from "./listing-fields.validator";
 
 export const UpdateListingModel = new Elysia().model({
-  "listing.update.params": t.Object({ id: t.String({ format: "uuid" }) }),
+  "listing.update.params": t.Object({ id: databaseUuidSchema }),
   "listing.update.body": t.Object(
     {
       category_id: t.Optional(listingFields.category_id),
@@ -42,10 +47,7 @@ export const UpdateListingModel = new Elysia().model({
     { additionalProperties: false, minProperties: 1 },
   ),
   "listing.updated": successSchema(
-    t.Object({
-      ...listingResponseFields,
-      updated_at: t.String({ format: "date-time" }),
-    }),
+    t.Object(withTimestamps(listingResponseFields, "updated_at")),
   ),
   "listing.not_found": errorSchema(new ListingNotFoundError()),
   "listing.update.category_not_found": errorSchema(
