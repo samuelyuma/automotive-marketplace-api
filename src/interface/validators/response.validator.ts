@@ -1,4 +1,4 @@
-import { type TSchema, t } from "elysia";
+import Elysia, { type TSchema, t } from "elysia";
 
 import { errorResponse, standardErrors } from "../http/response";
 
@@ -73,3 +73,10 @@ export const badRequestSchema = t.Union([
 ]);
 
 export const internalErrorSchema = standardErrorSchema("internal");
+
+export const rateLimitedSchema = standardErrorSchema("rateLimited");
+
+// Shared by every route: the global rate-limit plugin can 429 any request.
+export const RateLimitModel = new Elysia().model({
+  "rate.limited": rateLimitedSchema,
+});

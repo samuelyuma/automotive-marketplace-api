@@ -1,5 +1,6 @@
 import Elysia from "elysia";
 
+import { InvalidListingSearchQueryError } from "../../domain/errors/listing-error";
 import type { Container } from "../../main/container";
 import { cachedRead, invalidateReadCache } from "../http/read-cache";
 import { paginatedResponse, successResponse } from "../http/response";
@@ -30,6 +31,27 @@ import {
   ListListingsModel,
   listCategoryListingsRouteDetail,
 } from "../validators/listing/list-listings.validator";
+import { RateLimitModel } from "../validators/response.validator";
+
+const categoryListingsQueryKeys = new Set([
+  "category_id",
+  "make",
+  "model",
+  "condition",
+  "fuel_type",
+  "transmission",
+  "min_year",
+  "max_year",
+  "min_price",
+  "max_price",
+  "min_mileage",
+  "max_mileage",
+  "location",
+  "sort",
+  "direction",
+  "per_page",
+  "cursor",
+]);
 
 export function createCategoryController({
   cache,
@@ -42,6 +64,7 @@ export function createCategoryController({
     .use(ListCategoryModel)
     .use(UpdateCategoryModel)
     .use(ListListingsModel)
+    .use(RateLimitModel)
     .get(
       "",
       async ({ request }) =>
@@ -58,6 +81,7 @@ export function createCategoryController({
       {
         response: {
           200: "category.tree",
+          429: "rate.limited",
           500: "category.internal_error",
         },
         detail: listCategoryRouteDetail,
@@ -65,8 +89,13 @@ export function createCategoryController({
     )
     .get(
       "/:id/listings",
-      async ({ params, query, request }) =>
-        cachedRead(
+      async ({ params, query, request }) => {
+        const unknown = [...new URL(request.url).searchParams.keys()].find(
+          (key) => !categoryListingsQueryKeys.has(key),
+        );
+        if (unknown !== undefined)
+          throw new InvalidListingSearchQueryError(unknown);
+        return cachedRead(
           cache,
           request,
           async () => {
@@ -86,7 +115,8 @@ export function createCategoryController({
             );
           },
           { resource: ["categories", "listings"], ttlSeconds: 60 },
-        ),
+        );
+      },
       {
         params: "category.detail.params",
         query: "listing.list.query",
@@ -94,6 +124,7 @@ export function createCategoryController({
           200: "listing.list",
           400: "listing.list.bad_request",
           404: "category.not_found",
+          429: "rate.limited",
           500: "listing.list.internal_error",
         },
         detail: listCategoryListingsRouteDetail,
@@ -120,6 +151,7 @@ export function createCategoryController({
           200: "category.detail",
           400: "category.bad_request",
           404: "category.not_found",
+          429: "rate.limited",
           500: "category.internal_error",
         },
         detail: getCategoryRouteDetail,
@@ -145,6 +177,7 @@ export function createCategoryController({
           400: "category.bad_request",
           409: "category.conflict",
           422: "category.parent_not_found",
+          429: "rate.limited",
           500: "category.internal_error",
         },
         detail: createCategoryRouteDetail,
@@ -166,6 +199,7 @@ export function createCategoryController({
           404: "category.not_found",
           409: "category.conflict",
           422: "category.update.invalid_parent",
+          429: "rate.limited",
           500: "category.internal_error",
         },
         detail: updateCategoryRouteDetail,

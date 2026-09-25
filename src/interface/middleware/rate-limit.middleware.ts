@@ -1,7 +1,7 @@
 import { Elysia } from "elysia";
 
 import { logger } from "../../infrastructure/logging/logger";
-import { errorResponse } from "../http/response";
+import { errorResponse, standardErrors } from "../http/response";
 
 type Bucket = "read" | "write";
 type LimitResult = { success: boolean; reset: number };
@@ -34,7 +34,13 @@ export function createRateLimitPlugin({
         set.headers["retry-after"] = String(
           Math.max(1, Math.ceil((result.reset - Date.now()) / 1000)),
         );
-        return status(429, errorResponse("RATE_LIMITED", "Too many requests"));
+        return status(
+          429,
+          errorResponse(
+            standardErrors.rateLimited.code,
+            standardErrors.rateLimited.message,
+          ),
+        );
       } catch (error) {
         logger.warn({ exception: error }, "rate limiter unavailable");
       }

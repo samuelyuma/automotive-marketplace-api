@@ -1,5 +1,6 @@
 import Elysia from "elysia";
 
+import { InvalidListingSearchQueryError } from "../../domain/errors/listing-error";
 import type { Container } from "../../main/container";
 import { cachedRead, invalidateReadCache } from "../http/read-cache";
 import { paginatedResponse, successResponse } from "../http/response";
@@ -28,6 +29,27 @@ import {
   UpdateListingModel,
   updateListingRouteDetail,
 } from "../validators/listing/update-listing.validator";
+import { RateLimitModel } from "../validators/response.validator";
+
+const listQueryKeys = new Set([
+  "category_id",
+  "make",
+  "model",
+  "condition",
+  "fuel_type",
+  "transmission",
+  "min_year",
+  "max_year",
+  "min_price",
+  "max_price",
+  "min_mileage",
+  "max_mileage",
+  "location",
+  "sort",
+  "direction",
+  "per_page",
+  "cursor",
+]);
 
 export function createListingController({
   cache,
@@ -40,10 +62,16 @@ export function createListingController({
     .use(DeleteListingModel)
     .use(ListListingsModel)
     .use(GetListingModel)
+    .use(RateLimitModel)
     .get(
       "",
-      async ({ query, request }) =>
-        cachedRead(
+      async ({ query, request }) => {
+        const unknown = [...new URL(request.url).searchParams.keys()].find(
+          (key) => !listQueryKeys.has(key),
+        );
+        if (unknown !== undefined)
+          throw new InvalidListingSearchQueryError(unknown);
+        return cachedRead(
           cache,
           request,
           async () => {
@@ -61,12 +89,14 @@ export function createListingController({
             );
           },
           { resource: "listings", ttlSeconds: 60 },
-        ),
+        );
+      },
       {
         query: "listing.list.query",
         response: {
           200: "listing.list",
           400: "listing.list.bad_request",
+          429: "rate.limited",
           500: "listing.list.internal_error",
         },
         detail: listListingsRouteDetail,
@@ -85,6 +115,7 @@ export function createListingController({
           200: "listing.detail",
           400: "listing.detail.bad_request",
           404: "listing.detail.not_found",
+          429: "rate.limited",
           500: "listing.detail.internal_error",
         },
         detail: getListingRouteDetail,
@@ -106,6 +137,7 @@ export function createListingController({
           201: "listing.created",
           400: "listing.bad_request",
           422: "listing.category_not_found",
+          429: "rate.limited",
           500: "listing.internal_error",
         },
         detail: createListingRouteDetail,
@@ -126,6 +158,7 @@ export function createListingController({
           400: "listing.bad_request",
           404: "listing.not_found",
           422: "listing.update.category_not_found",
+          429: "rate.limited",
           500: "listing.internal_error",
         },
         detail: updateListingRouteDetail,
@@ -151,6 +184,7 @@ export function createListingController({
           200: "listing.deleted",
           400: "listing.bad_request",
           404: "listing.not_found",
+          429: "rate.limited",
           500: "listing.internal_error",
         },
         detail: deleteListingRouteDetail,

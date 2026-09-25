@@ -34,6 +34,10 @@ export const standardErrors = {
     code: "INTERNAL_SERVER_ERROR",
     message: "Something went wrong",
   },
+  rateLimited: {
+    code: "RATE_LIMITED",
+    message: "Too many requests",
+  },
 } as const;
 
 export function successResponse<T>(data: T, message: string) {

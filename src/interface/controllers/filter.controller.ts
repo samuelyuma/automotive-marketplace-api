@@ -12,6 +12,7 @@ import {
   getCategoryFiltersRouteDetail,
   getFiltersRouteDetail,
 } from "../validators/filter.validator";
+import { RateLimitModel } from "../validators/response.validator";
 
 function unknownQueryError(request: Request) {
   if (new URL(request.url).searchParams.size === 0) return null;
@@ -25,6 +26,7 @@ function unknownQueryError(request: Request) {
 export function createFilterController({ cache, filterService }: Container) {
   return new Elysia({ prefix: "/filters" })
     .use(FilterModel)
+    .use(RateLimitModel)
     .get(
       "",
       async ({ request, status }) => {
@@ -46,6 +48,7 @@ export function createFilterController({ cache, filterService }: Container) {
         response: {
           200: "filter.list",
           400: "filter.list.bad_request",
+          429: "rate.limited",
           500: "filter.list.internal_error",
         },
         detail: getFiltersRouteDetail,
@@ -74,6 +77,7 @@ export function createFilterController({ cache, filterService }: Container) {
           200: "filter.category",
           400: "filter.category.bad_request",
           404: "filter.category.not_found",
+          429: "rate.limited",
           500: "filter.category.internal_error",
         },
         detail: getCategoryFiltersRouteDetail,

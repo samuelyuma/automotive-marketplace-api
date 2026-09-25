@@ -13,6 +13,7 @@ import {
   SuggestListingsModel,
   suggestListingsRouteDetail,
 } from "../validators/listing-suggest.validator";
+import { RateLimitModel } from "../validators/response.validator";
 
 const searchQueryKeys = new Set([
   "q",
@@ -43,6 +44,7 @@ export function createListingSearchController({
   return new Elysia({ prefix: "/listings/search" })
     .use(SearchListingsModel)
     .use(SuggestListingsModel)
+    .use(RateLimitModel)
     .get(
       "/suggest",
       async ({ query, request }) => {
@@ -67,6 +69,7 @@ export function createListingSearchController({
         response: {
           200: "listing.suggest",
           400: "listing.suggest.bad_request",
+          429: "rate.limited",
           500: "listing.suggest.internal_error",
         },
         detail: suggestListingsRouteDetail,
@@ -118,6 +121,7 @@ export function createListingSearchController({
         response: {
           200: "listing.search",
           400: "listing.search.bad_request",
+          429: "rate.limited",
           500: "listing.search.internal_error",
         },
         detail: searchListingsRouteDetail,
