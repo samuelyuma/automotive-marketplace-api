@@ -17,7 +17,13 @@ const EnvSchema = t.Object({
     { default: "info" },
   ),
   DATABASE_URL: t.String({ minLength: 1 }),
+  DATABASE_URL_UNPOOLED: t.Optional(t.String({ minLength: 1 })),
+  REDIS_BACKEND: t.Union([t.Literal("tcp"), t.Literal("upstash")], {
+    default: "tcp",
+  }),
   REDIS_URL: t.String({ minLength: 1, default: "redis://localhost:6379" }),
+  UPSTASH_REDIS_REST_URL: t.Optional(t.String({ minLength: 1 })),
+  UPSTASH_REDIS_REST_TOKEN: t.Optional(t.String({ minLength: 1 })),
 });
 
 type Env = typeof EnvSchema.static;
@@ -32,7 +38,21 @@ function loadEnv(): Env {
     );
     process.exit(1);
   }
-  return Value.Decode(EnvSchema, input);
+  const decoded = Value.Decode(EnvSchema, input);
+  if (process.env.VERCEL && decoded.REDIS_BACKEND !== "upstash") {
+    console.error("✗ Vercel requires REDIS_BACKEND=upstash");
+    process.exit(1);
+  }
+  if (
+    decoded.REDIS_BACKEND === "upstash" &&
+    (!decoded.UPSTASH_REDIS_REST_URL || !decoded.UPSTASH_REDIS_REST_TOKEN)
+  ) {
+    console.error(
+      "✗ Upstash requires UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN",
+    );
+    process.exit(1);
+  }
+  return decoded;
 }
 
 export const env = loadEnv();

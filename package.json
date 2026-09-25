@@ -16,6 +16,8 @@
     "@bogeychan/elysia-logger": "^0.1.10",
     "@elysia/openapi": "^1.4.16",
     "@sinclair/typebox": "0.34.52",
+    "@upstash/ratelimit": "^2.2.0",
+    "@upstash/redis": "^1.39.0",
     "elysia": "latest",
     "pino": "10.3.1",
     "pino-pretty": "^13.1.3",
