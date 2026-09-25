@@ -27,5 +27,5 @@
       "@repository/*": ["./src/repository/*"],
     }
   },
-  "include": ["src", "index.ts"]
+  "include": ["src", "server.ts"]
 }

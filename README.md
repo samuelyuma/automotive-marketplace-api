@@ -50,3 +50,9 @@ bun run migrate:down
 
 Migration files live in `migrations/` as matching `.up.sql` and
 `.down.sql` files.
+
+## Vercel Deployment
+
+See [the deployment guide](docs/DEPLOYMENT.md) for Neon and Upstash setup,
+environment variables, migrations, and smoke checks. Local Docker and hybrid
+development continue to use the configuration above.

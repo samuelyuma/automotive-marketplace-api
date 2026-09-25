@@ -1,7 +1,18 @@
 import { join } from "node:path";
 import { Glob } from "bun";
 
-import { sql } from "./client";
+import postgres from "postgres";
+
+import { env } from "@main/config/env";
+
+export function migrationConnectionUrl(config: {
+  DATABASE_URL: string;
+  DATABASE_URL_UNPOOLED?: string;
+}) {
+  return config.DATABASE_URL_UNPOOLED ?? config.DATABASE_URL;
+}
+
+const sql = postgres(migrationConnectionUrl(env));
 
 const MIGRATIONS_DIR = join(import.meta.dir, "../../../migrations");
 

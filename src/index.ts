@@ -18,7 +18,7 @@ async function start() {
     const shutdown = async () => {
       logger.info({}, "shutting down");
       await sql.end();
-      await redis.quit();
+      if (redis.isOpen) await redis.quit();
       process.exit(0);
     };
 

@@ -3,6 +3,8 @@ import { checkDatabaseHealth } from "@infrastructure/postgres/health";
 import { connectRedis } from "@infrastructure/redis/client";
 import { checkRedisHealth } from "@infrastructure/redis/health";
 
+import { env } from "@main/config/env";
+
 export async function initDependencies(): Promise<void> {
   const dbHealthy = await checkDatabaseHealth();
   if (!dbHealthy) {
@@ -12,7 +14,7 @@ export async function initDependencies(): Promise<void> {
   logger.info({}, "✅ Database connected");
 
   try {
-    await connectRedis();
+    if (env.REDIS_BACKEND === "tcp") await connectRedis();
     if (!(await checkRedisHealth()))
       throw new Error("Redis ping failed after connect");
     logger.info({}, "✅ Redis connected");
