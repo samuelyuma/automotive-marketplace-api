@@ -13,7 +13,7 @@ import {
   toCreatedCategory,
   toUpdatedCategory,
 } from "../presenters/category.presenter";
-import { toListingDetail } from "../presenters/listing.presenter";
+import { toListingSummary } from "../presenters/listing.presenter";
 import {
   CreateCategoryModel,
   createCategoryRouteDetail,
@@ -89,7 +89,7 @@ export function createCategoryController({
             });
 
             return paginatedResponse(
-              page.data.map(toListingDetail),
+              page.data.map(toListingSummary),
               "Listings retrieved",
               page.meta,
               page.facets,

@@ -1,3 +1,4 @@
+// Match database constraint failures to domain errors without parsing messages.
 export const CONSTRAINTS = {
   listingCategoryFk: "vehicle_listings_category_id_fkey",
   categorySlugUnique: "categories_slug_key",

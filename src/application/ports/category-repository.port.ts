@@ -1,4 +1,5 @@
 import type {
+  CategoryAttribute,
   CategoryDetail,
   CategoryWithAttributes,
   NewCategory,
@@ -7,6 +8,7 @@ import type {
 } from "../../domain/entities/category";
 
 export interface CategoryRepository {
+  getAttributeById(id: string): Promise<CategoryAttribute | null>;
   listHierarchy(): Promise<CategoryWithAttributes[]>;
   getWithChildren(id: string): Promise<CategoryDetail | null>;
   create(data: NewCategory): Promise<CategoryWithAttributes>;

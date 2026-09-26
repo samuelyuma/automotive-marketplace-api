@@ -11,6 +11,7 @@ type RateLimitOptions = {
   check: (bucket: Bucket, ip: string) => Promise<LimitResult>;
 };
 
+// Read and write requests use separate rate-limit buckets.
 export function createRateLimitPlugin({
   enabled = true,
   check,
@@ -23,6 +24,7 @@ export function createRateLimitPlugin({
         request.method === "GET" || request.method === "HEAD"
           ? "read"
           : "write";
+      // The first forwarded address is the key used by the limiter.
       const ip =
         request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
         "unknown";
@@ -31,6 +33,7 @@ export function createRateLimitPlugin({
         const result = await check(bucket, ip);
         if (result.success) return;
 
+        // Tell the client how many whole seconds remain until reset.
         set.headers["retry-after"] = String(
           Math.max(1, Math.ceil((result.reset - Date.now()) / 1000)),
         );
@@ -42,6 +45,7 @@ export function createRateLimitPlugin({
           ),
         );
       } catch (error) {
+        // Let requests through when the limiter backend is unavailable.
         logger.warn({ exception: error }, "rate limiter unavailable");
       }
     })

@@ -53,7 +53,7 @@ export function buildContainer(
     listingService: traceLayer(
       "service",
       "listing",
-      new ListingService(listingRepository, cache),
+      new ListingService(listingRepository, categoryRepository, cache),
     ),
     listingSearchService: traceLayer(
       "service",

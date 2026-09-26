@@ -85,9 +85,9 @@ The request path is HTTP route to validator to application service to port imple
 
 Categories use an adjacency list: each row has an optional `parent_id` referencing another category. A recursive CTE builds the full tree and expands a category to its descendants when listing results are scoped to a category. The API returns the tree with child categories sorted by name and then ID. The tree query detects categories that are unreachable from a root, which exposes cycles in the stored hierarchy.
 
-Attribute definitions belong to one category and have an `ENUM`, `RANGE`, or `BOOLEAN` type. Active definitions have unique keys within their category; removed definitions are soft-deleted and can be replaced. Current listing filter values still come from fixed listing columns. Category definitions describe available filter metadata, rather than arbitrary per-listing values.
+Attribute definitions belong to one category and have an `ENUM`, `RANGE`, or `BOOLEAN` type. Active definitions have unique keys within their category; removed definitions are soft-deleted and can be replaced. Listings store optional typed values for their category's active definitions in `listing_attribute_values`. Listing writes validate each submitted value and save it in the same transaction as the listing; changing a listing's category clears its previous values. Listing detail responses include the saved values as `{ key, label, value }` entries.
 
-`GET /api/filters` returns catalog-wide counts and ranges. `GET /api/filters/:categoryId` scopes the counts to the category and its descendants, then returns active definitions from the requested category.
+`GET /api/filters` returns catalog-wide counts and ranges. `GET /api/filters/:categoryId` scopes fixed filter counts to the category and its descendants, then returns active definitions from the requested category. Each definition includes counts or numeric bounds from available listings in that category; unused ENUM options have zero counts.
 
 ## Listing Search
 
@@ -124,7 +124,7 @@ Redis caches listing reads and suggestions for 60 seconds, and category and filt
 | Choice | Reason | Trade-off |
 | --- | --- | --- |
 | Store categories with a parent reference and expand descendants with recursive queries. | Parent-child writes stay simple, while category pages can include listings from child categories. | Tree reads require recursion and cycle checks. |
-| Keep the listing fields used by search and filters in typed columns. | PostgreSQL constraints and ordinary predicates can validate and query these fields directly. | Adding arbitrary per-listing attributes needs storage and query support; category definitions alone do not store their values. |
+| Keep common listing fields in typed columns and category-specific values in a typed value table. | PostgreSQL can aggregate numeric values directly while existing listing searches keep their fixed-column predicates. | Browsing listings by arbitrary attribute value requires a separate search query change. |
 | Generate a full-text vector for make, model, and location, then index it with GIN. | Search and relevance ranking use the same indexed text fields. | Other listing fields are not included in text search, and maintaining the index adds write work. |
 | Use cursors made from the selected sort value and listing ID. | The ID breaks ties and lets the next page continue from the last row without an increasing offset. | A cursor is tied to its sort and direction and does not freeze the result set while listings change. |
 | Add indexes for the current filter, sort, and suggestion query shapes. | They give PostgreSQL paths for the queries implemented today. | Indexes use storage and add write work; plans and latency still need measurement against representative data. |

@@ -26,6 +26,22 @@ export function literalUnion<const T extends readonly string[]>(
 export const conditionSchema = t.Union(literalUnion(LISTING_CONDITIONS));
 export const fuelTypeSchema = t.Union(literalUnion(FUEL_TYPES));
 export const transmissionSchema = t.Union(literalUnion(TRANSMISSIONS));
+export const submittedAttributesSchema = t.Array(
+  t.Object(
+    {
+      attribute_definition_id: databaseUuidSchema,
+      value: t.Union([t.String(), t.Number(), t.Boolean()]),
+    },
+    { additionalProperties: false },
+  ),
+);
+export const listingAttributesSchema = t.Array(
+  t.Object({
+    key: t.String(),
+    label: t.String(),
+    value: t.Union([t.String(), t.Number(), t.Boolean()]),
+  }),
+);
 
 export const listingFields = {
   category_id: databaseUuidSchema,

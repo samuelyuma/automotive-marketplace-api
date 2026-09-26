@@ -58,13 +58,21 @@ export const FilterModel = new Elysia().model({
             ...attributeBase,
             type: t.Literal("ENUM"),
             options: t.Array(t.String()),
+            counts: filterCountSchema,
           }),
           t.Object({
             ...attributeBase,
             type: t.Literal("RANGE"),
             range: filterRangeSchema,
           }),
-          t.Object({ ...attributeBase, type: t.Literal("BOOLEAN") }),
+          t.Object({
+            ...attributeBase,
+            type: t.Literal("BOOLEAN"),
+            counts: t.Object({
+              true: t.Integer({ minimum: 0 }),
+              false: t.Integer({ minimum: 0 }),
+            }),
+          }),
         ]),
       ),
     }),
@@ -84,6 +92,6 @@ export const getFiltersRouteDetail = {
 export const getCategoryFiltersRouteDetail = {
   summary: "Get Category Filters",
   description:
-    "Returns fixed filter counts and ranges from available listings in the category subtree, plus active attribute definitions from this category only. RANGE bounds are available for price, year, mileage, and engine_cc keys; other keys have null bounds.",
+    "Returns fixed filter counts and ranges from available listings in the category subtree, plus counts and ranges for active attribute definitions from listings in this category.",
   tags: ["Search & Filters"],
 };

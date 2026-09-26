@@ -3,6 +3,7 @@ import { Elysia } from "elysia";
 import { logger } from "../../infrastructure/logging/logger";
 import { requestContext } from "./request-context.middleware";
 
+// Log once after the response so the final status and duration are available.
 export const accessLog = new Elysia({ name: "access-log" })
   .use(requestContext)
   .onAfterResponse(

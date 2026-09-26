@@ -4,7 +4,7 @@ import type { Container } from "../../main/container";
 import { cachedRead } from "../http/read-cache";
 import { paginatedResponse, successResponse } from "../http/response";
 import { assertNoUnknownQueryParams } from "../http/strict-query";
-import { toListingDetail } from "../presenters/listing.presenter";
+import { toListingSummary } from "../presenters/listing.presenter";
 import {
   SearchListingsModel,
   searchListingsRouteDetail,
@@ -103,7 +103,7 @@ export function createListingSearchController({
             });
 
             return paginatedResponse(
-              page.data.map(toListingDetail),
+              page.data.map(toListingSummary),
               "Listings found",
               page.meta,
             );

@@ -9,6 +9,7 @@ import {
 } from "../http/response";
 import { requestContext } from "./request-context.middleware";
 
+// Domain error kinds have stable HTTP statuses across routes.
 const statusByKind = {
   not_found: 404,
   conflict: 409,
@@ -28,6 +29,7 @@ type Handled = {
   body: ErrorResponse;
 };
 
+// Keep the same request fields on every error log entry.
 function buildLogBase(ctx: {
   request: Request;
   requestId?: string;
@@ -41,6 +43,7 @@ function buildLogBase(ctx: {
   };
 }
 
+// Domain errors expose their code and safe details to the client.
 function handleDomainError(error: DomainError, base: LogBase): Handled {
   const mapped = statusByKind[error.kind];
   logger.warn(
@@ -53,6 +56,7 @@ function handleDomainError(error: DomainError, base: LogBase): Handled {
   };
 }
 
+// Request validation is a 400; an invalid response is a server error.
 function handleValidationError(
   error: Readonly<ValidationError>,
   base: LogBase,
@@ -62,6 +66,7 @@ function handleValidationError(
     issue: e.message,
   }));
   if (error.type === "response") {
+    // Log the schema details, but return only the generic server error.
     logger.error(
       {
         ...base,
@@ -69,6 +74,7 @@ function handleValidationError(
         error_code: standardErrors.internal.code,
         validation_source: error.type,
         validation_details: details,
+        // A few invalid IDs help diagnose bad presenters without logging the response.
         invalid_ids: error.all
           ?.filter((e) => /(?:^|\/)id$/.test(e.path ?? ""))
           .slice(0, 5)
@@ -150,6 +156,7 @@ function handleUnhandled(error: unknown, base: LogBase): Handled {
   };
 }
 
+// Handle expected errors first, then hide unhandled exceptions behind a 500.
 export const errorHandler = new Elysia({ name: "error-handler" })
   .use(requestContext)
   .onError({ as: "global" }, (ctx) => {

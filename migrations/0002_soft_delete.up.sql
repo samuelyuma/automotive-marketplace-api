@@ -1,3 +1,6 @@
+-- Name: 0002_soft_delete.up
+-- Description: Adds removed listings and soft-deleted attributes with reusable category keys.
+
 ALTER TYPE listing_statuses ADD VALUE 'REMOVED';
 
 ALTER TABLE attribute_definitions
@@ -11,6 +14,7 @@ ALTER TABLE attribute_definitions
   ALTER COLUMN updated_at SET NOT NULL,
   DROP CONSTRAINT attribute_definitions_category_key;
 
+-- Only active definitions need a unique key within their category.
 CREATE UNIQUE INDEX attribute_definitions_active_category_key
   ON attribute_definitions (category_id, key)
   WHERE deleted_at IS NULL;

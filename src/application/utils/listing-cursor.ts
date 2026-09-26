@@ -6,6 +6,7 @@ import type {
   ListingSort,
 } from "../ports/listing-search-repository.port";
 
+// Store the sort order with the row so a cursor cannot be reused for another order.
 export function encodeListingCursor(
   sort: ListingSort,
   direction: ListingDirection,
@@ -16,6 +17,7 @@ export function encodeListingCursor(
   ).toString("base64url");
 }
 
+// Validate every decoded field before it reaches the SQL cursor comparison.
 export function decodeListingCursor(
   encoded: string | undefined,
   sort: ListingSort,
@@ -28,6 +30,7 @@ export function decodeListingCursor(
     );
     if (typeof parsed !== "object" || parsed === null) throw new Error();
     const value = parsed as Record<string, unknown>;
+    // The version and sort order must match the request that uses the cursor.
     if (
       value.version !== 1 ||
       value.sort !== sort ||
@@ -38,9 +41,11 @@ export function decodeListingCursor(
     )
       throw new Error();
 
+    // Each sort field has a different value type and database range.
     if (sort === "created_at") {
       if (!Number.isFinite(Date.parse(value.value))) throw new Error();
     } else if (sort === "relevance") {
+      // Rank is a nonnegative decimal, not arbitrary text cast by PostgreSQL.
       const rank = Number(value.value);
       if (
         value.value.length > 64 ||
@@ -51,6 +56,7 @@ export function decodeListingCursor(
       )
         throw new Error();
     } else {
+      // Numeric columns have different bounds, and price must stay JS-safe.
       const numeric = Number(value.value);
       const minimum = sort === "year" ? 1900 : 0;
       const maximum =
@@ -69,6 +75,7 @@ export function decodeListingCursor(
     }
     return { id: value.id, value: value.value };
   } catch {
+    // Malformed JSON, encoding, and field values share one public error.
     throw new InvalidListingCursorError();
   }
 }

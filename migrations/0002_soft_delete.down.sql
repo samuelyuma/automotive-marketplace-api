@@ -1,3 +1,7 @@
+-- Name: 0002_soft_delete.down
+-- Description: Reverts soft deletes after checking that no removed or edited data would be lost.
+
+-- Stop the rollback if it would discard a removed listing or changed attribute.
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM vehicle_listings WHERE status = 'REMOVED') THEN

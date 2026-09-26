@@ -2,10 +2,13 @@ import Elysia, { t } from "elysia";
 
 import { UPDATABLE_LISTING_STATUSES } from "../../../domain/entities/listing";
 import {
+  ListingAttributeCategoryMismatchError,
+  ListingAttributeNotFoundError,
   ListingCategoryNotFoundError,
   ListingNotFoundError,
 } from "../../../domain/errors/listing-error";
 import {
+  badRequestSchema,
   errorSchema,
   successSchema,
   withTimestamps,
@@ -15,6 +18,7 @@ import {
   fuelTypeSchema,
   listingFields,
   listingResponseFields,
+  submittedAttributesSchema,
   transmissionSchema,
 } from "./listing-fields.validator";
 
@@ -43,12 +47,18 @@ export const UpdateListingModel = new Elysia().model({
       image_url: t.Optional(t.Nullable(t.String())),
       fuel_type: t.Optional(t.Nullable(fuelTypeSchema)),
       transmission: t.Optional(t.Nullable(transmissionSchema)),
+      attributes: t.Optional(submittedAttributesSchema),
     },
     { additionalProperties: false, minProperties: 1 },
   ),
   "listing.updated": successSchema(
     t.Object(withTimestamps(listingResponseFields, "updated_at")),
   ),
+  "listing.update.bad_request": t.Union([
+    badRequestSchema,
+    errorSchema(new ListingAttributeNotFoundError()),
+    errorSchema(new ListingAttributeCategoryMismatchError()),
+  ]),
   "listing.not_found": errorSchema(new ListingNotFoundError()),
   "listing.update.category_not_found": errorSchema(
     new ListingCategoryNotFoundError(),

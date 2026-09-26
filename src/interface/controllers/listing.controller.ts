@@ -10,6 +10,7 @@ import {
 import {
   toCreatedListing,
   toListingDetail,
+  toListingSummary,
   toUpdatedListing,
 } from "../presenters/listing.presenter";
 import {
@@ -63,7 +64,7 @@ export function createListingController({
             });
 
             return paginatedResponse(
-              page.data.map(toListingDetail),
+              page.data.map(toListingSummary),
               "Listings retrieved",
               page.meta,
               page.facets,
@@ -136,7 +137,7 @@ export function createListingController({
         body: "listing.update.body",
         response: {
           200: "listing.updated",
-          400: "listing.bad_request",
+          400: "listing.update.bad_request",
           404: "listing.not_found",
           422: "listing.update.category_not_found",
           429: "rate.limited",

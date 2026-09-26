@@ -1,6 +1,10 @@
 import Elysia, { t } from "elysia";
 
-import { ListingCategoryNotFoundError } from "../../../domain/errors/listing-error";
+import {
+  ListingAttributeCategoryMismatchError,
+  ListingAttributeNotFoundError,
+  ListingCategoryNotFoundError,
+} from "../../../domain/errors/listing-error";
 import { PG_INT32_MAX } from "../../../domain/postgres";
 import {
   badRequestSchema,
@@ -13,6 +17,7 @@ import {
   fuelTypeSchema,
   listingFields,
   listingResponseFields,
+  submittedAttributesSchema,
   transmissionSchema,
 } from "./listing-fields.validator";
 
@@ -26,13 +31,18 @@ export const CreateListingModel = new Elysia().model({
       engine_cc: t.Optional(
         t.Nullable(t.Integer({ minimum: 0, maximum: PG_INT32_MAX })),
       ),
+      attributes: t.Optional(submittedAttributesSchema),
     },
     { additionalProperties: false },
   ),
   "listing.created": successSchema(
     t.Object(withTimestamps(listingResponseFields, "created_at")),
   ),
-  "listing.bad_request": badRequestSchema,
+  "listing.bad_request": t.Union([
+    badRequestSchema,
+    errorSchema(new ListingAttributeNotFoundError()),
+    errorSchema(new ListingAttributeCategoryMismatchError()),
+  ]),
   "listing.category_not_found": errorSchema(new ListingCategoryNotFoundError()),
   "listing.internal_error": internalErrorSchema,
 });

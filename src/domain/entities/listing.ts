@@ -37,6 +37,26 @@ export type Listing = {
   engine_cc: number | null;
   created_at: Date;
   updated_at: Date;
+  attributes?: ListingAttributeValue[];
+};
+
+export type SubmittedAttribute = {
+  attribute_definition_id: string;
+  value: string | number | boolean;
+};
+
+// Validation fills only the column that matches the definition's type.
+export type ValidatedListingAttribute = {
+  attribute_definition_id: string;
+  text: string | null;
+  number: number | null;
+  bool: boolean | null;
+};
+
+export type ListingAttributeValue = {
+  key: string;
+  label: string;
+  value: string | number | boolean;
 };
 
 export type NewListing = Omit<
@@ -49,16 +69,20 @@ export type NewListing = Omit<
   | "engine_cc"
   | "created_at"
   | "updated_at"
+  | "attributes"
 > &
   Partial<
     Pick<Listing, "image_url" | "fuel_type" | "transmission" | "engine_cc">
-  >;
+  > & { attributes?: SubmittedAttribute[] };
 
 export type UpdateListing = Partial<
-  Omit<Listing, "id" | "created_at" | "updated_at" | "status"> & {
+  Omit<
+    Listing,
+    "id" | "created_at" | "updated_at" | "status" | "attributes"
+  > & {
     status: Exclude<ListingStatus, "REMOVED">;
   }
->;
+> & { attributes?: SubmittedAttribute[] };
 
 export type SoftDeletedListing = Pick<Listing, "id" | "updated_at"> & {
   status: "REMOVED";

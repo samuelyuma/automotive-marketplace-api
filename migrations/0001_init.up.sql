@@ -1,3 +1,6 @@
+-- Name: 0001_init.up
+-- Description: Creates the category, listing, and attribute tables with their enum types and indexes.
+
 CREATE TYPE listing_conditions AS ENUM ('NEW', 'USED', 'CERTIFIED');
 CREATE TYPE listing_statuses AS ENUM ('AVAILABLE', 'PENDING', 'SOLD');
 CREATE TYPE fuel_types AS ENUM ('PETROL', 'DIESEL', 'HYBRID', 'ELECTRIC');
@@ -35,6 +38,7 @@ CREATE TABLE vehicle_listings (
   transmission transmissions,
   engine_cc integer,
 
+  -- Keep text search in sync with the fields used by listing search.
   search_vector tsvector GENERATED ALWAYS AS (
     to_tsvector('simple', make || ' ' || model || ' ' || location)
   ) STORED,

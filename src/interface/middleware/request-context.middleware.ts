@@ -7,6 +7,7 @@ type RequestContextValues = {
   durationMs: () => number;
 };
 
+// Share one request ID and timer with logs, errors, and the response header.
 export const requestContext = new Elysia({ name: "request-context" })
   .onRequest((context) => {
     const startedAt = performance.now();
@@ -15,6 +16,7 @@ export const requestContext = new Elysia({ name: "request-context" })
 
     startRequestLogContext(requestId);
 
+    // Elysia's derive hook reads these values later in the request.
     Object.assign(context, {
       requestId,
       durationMs: () => Math.round(performance.now() - startedAt),

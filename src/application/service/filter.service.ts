@@ -12,6 +12,7 @@ import type {
   FilterStats,
 } from "../ports/filter-repository.port";
 
+// Show zero counts for options that have no available listings.
 function includeUnused(
   values: readonly string[],
   counts: FilterCount[],
@@ -31,25 +32,39 @@ function fixedFilters(stats: FilterStats) {
   };
 }
 
+// Keep ENUM options in their existing shape and attach the saved-value stats.
 function serializeAttribute(attribute: CategoryAttribute, stats: FilterStats) {
   const base = {
     id: attribute.id,
     key: attribute.key,
     label: attribute.label,
   };
+  const attributeStats = stats.attributes[attribute.id];
   if (attribute.type === "ENUM")
-    return { ...base, type: "ENUM" as const, options: attribute.options ?? [] };
-  if (attribute.type === "RANGE") {
-    const ranges: Record<string, FilterStats["price"]> = {
-      price: stats.price,
-      year: stats.year,
-      mileage: stats.mileage,
-      engine_cc: stats.engine_cc,
+    return {
+      ...base,
+      type: "ENUM" as const,
+      options: attribute.options ?? [],
+      counts: includeUnused(
+        attribute.options ?? [],
+        attributeStats?.counts ?? [],
+      ),
     };
-    const range = ranges[attribute.key] ?? { min: null, max: null };
-    return { ...base, type: "RANGE" as const, range };
+  if (attribute.type === "RANGE") {
+    return {
+      ...base,
+      type: "RANGE" as const,
+      range: attributeStats?.range ?? { min: null, max: null },
+    };
   }
-  return { ...base, type: "BOOLEAN" as const };
+  return {
+    ...base,
+    type: "BOOLEAN" as const,
+    counts: {
+      true: attributeStats?.true_count ?? 0,
+      false: attributeStats?.false_count ?? 0,
+    },
+  };
 }
 
 export class FilterService {

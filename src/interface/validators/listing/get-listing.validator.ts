@@ -9,12 +9,18 @@ import {
   withTimestamps,
 } from "../response.validator";
 import { databaseUuidSchema } from "../uuid.validator";
-import { listingResponseFields } from "./listing-fields.validator";
+import {
+  listingAttributesSchema,
+  listingResponseFields,
+} from "./listing-fields.validator";
 
 export const GetListingModel = new Elysia().model({
   "listing.detail.params": t.Object({ id: databaseUuidSchema }),
   "listing.detail": successSchema(
-    t.Object(withTimestamps(listingResponseFields, "created_at", "updated_at")),
+    t.Object({
+      ...withTimestamps(listingResponseFields, "created_at", "updated_at"),
+      attributes: listingAttributesSchema,
+    }),
   ),
   "listing.detail.bad_request": badRequestSchema,
   "listing.detail.not_found": errorSchema(new ListingNotFoundError()),

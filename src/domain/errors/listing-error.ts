@@ -1,5 +1,34 @@
 import { DomainError } from "./domain-error";
 
+export class ListingAttributeNotFoundError extends DomainError {
+  readonly kind = "bad_request" as const;
+  readonly code = "LISTING_ATTRIBUTE_NOT_FOUND";
+  constructor() {
+    super("Attribute definition does not exist or is inactive");
+    this.name = "ListingAttributeNotFoundError";
+  }
+}
+
+export class ListingAttributeCategoryMismatchError extends DomainError {
+  readonly kind = "bad_request" as const;
+  readonly code = "LISTING_ATTRIBUTE_CATEGORY_MISMATCH";
+  constructor() {
+    super("Attribute definition does not belong to the listing category");
+    this.name = "ListingAttributeCategoryMismatchError";
+  }
+}
+
+export class InvalidListingAttributeError extends DomainError {
+  readonly kind = "bad_request" as const;
+  readonly code = "VALIDATION_ERROR";
+  override readonly details: { field: string; issue: string }[];
+  constructor(field: string, issue: string) {
+    super("Request validation failed");
+    this.name = "InvalidListingAttributeError";
+    this.details = [{ field, issue }];
+  }
+}
+
 export class ListingCategoryNotFoundError extends DomainError {
   readonly kind = "invalid" as const;
   readonly code = "LISTING_CATEGORY_NOT_FOUND";

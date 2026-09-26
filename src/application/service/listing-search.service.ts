@@ -15,6 +15,7 @@ import {
 } from "../utils/listing-cursor";
 import { normalizeListingSearchTerm } from "../utils/listing-search";
 
+// Validate matching minimum and maximum fields as pairs.
 const listingSearchRanges = [
   ["min_price", "max_price"],
   ["min_year", "max_year"],
@@ -24,6 +25,7 @@ const listingSearchRanges = [
 export class ListingSearchService {
   constructor(private readonly repository: ListingSearchRepository) {}
 
+  // The repository fetches one extra row to detect a next page.
   async list(
     query: ListingFilters & {
       q?: string;
@@ -61,6 +63,7 @@ export class ListingSearchService {
     };
   }
 
+  // Choose relevance for text searches and newest-first for ordinary browsing.
   search(
     query: ListingFilters & {
       q?: string;
@@ -77,6 +80,7 @@ export class ListingSearchService {
         throw new InvalidListingSearchRangeError(max, min);
     }
     const q = normalizeListingSearchTerm(query.q);
+    // Punctuation-only searches have no text query, so relevance cannot apply.
     const sort =
       query.sort === "relevance" && !q
         ? "created_at"
@@ -91,6 +95,7 @@ export class ListingSearchService {
     });
   }
 
+  // Keep suggestion input useful and cap the number of returned rows.
   suggest(query: { q: string; type?: ListingSuggestionType; limit?: number }) {
     const q = query.q.trim();
     if (q.length < 2) throw new InvalidListingSuggestionError();

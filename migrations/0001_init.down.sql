@@ -1,3 +1,6 @@
+-- Name: 0001_init.down
+-- Description: Removes the initial listing and category tables, enum types, and their indexes.
+
 DROP TABLE IF EXISTS attribute_definitions;
 DROP TABLE IF EXISTS vehicle_listings;
 DROP TABLE IF EXISTS categories;

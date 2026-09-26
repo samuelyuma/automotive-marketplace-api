@@ -164,7 +164,7 @@ The Scalar API reference linked in [Live API](#live-api) documents endpoint para
 
 **Interactive diagram:** [View the schema in dbdiagram.io](https://dbdiagram.io/d/Automotive-Marketplace-6ab3a31658694256126ee4bc). The editable [DBML source](docs/schema.dbml) is also in this repository.
 
-![Automotive Marketplace database schema](docs/db-diagram-schema.png)
+![Automotive Marketplace database schema](docs/db-schema.png)
 
 ## Architecture
 

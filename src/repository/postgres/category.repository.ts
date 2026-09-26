@@ -23,6 +23,7 @@ import { sql } from "../../infrastructure/postgres/client";
 import { timedQuery } from "../../infrastructure/postgres/timed-query";
 import { CONSTRAINTS } from "./constraint-names";
 
+// Turn known database constraints into the API's category errors.
 function throwCategoryError(error: unknown): never {
   if (error instanceof postgres.PostgresError) {
     if (
@@ -88,6 +89,7 @@ type AttributeJoinColumns = {
   attribute_updated_at: Date | null;
 };
 
+// A left join has no attribute ID when the category has no definitions.
 function toCategoryAttribute(
   row: AttributeJoinColumns,
   categoryId: string,
@@ -116,6 +118,15 @@ function toCategoryAttribute(
 }
 
 export class PgCategoryRepository implements CategoryRepository {
+  // Lets listing validation distinguish an unknown definition from a foreign one.
+  async getAttributeById(id: string): Promise<CategoryAttribute | null> {
+    const [attribute] = await sql<CategoryAttribute[]>`
+      SELECT id, category_id, key, label, type, options, created_at, updated_at, deleted_at
+      FROM attribute_definitions WHERE id = ${id} AND deleted_at IS NULL
+    `;
+    return attribute ?? null;
+  }
+  // The left join keeps categories with no definitions in the result.
   async getWithChildren(id: string): Promise<CategoryDetail | null> {
     return timedQuery("category.getWithChildren", "light", async () => {
       const rows = await sql<CategoryDetailRow[]>`
@@ -129,6 +140,7 @@ export class PgCategoryRepository implements CategoryRepository {
              attribute.created_at AS attribute_created_at,
              attribute.updated_at AS attribute_updated_at
       FROM categories category
+      -- A left join still returns a category with no active definitions.
       LEFT JOIN attribute_definitions attribute
         ON attribute.category_id = category.id AND attribute.deleted_at IS NULL
       WHERE category.id = ${id}
@@ -165,10 +177,12 @@ export class PgCategoryRepository implements CategoryRepository {
     });
   }
 
+  // The recursive query also checks that every category is reachable from a root.
   async listHierarchy(): Promise<CategoryWithAttributes[]> {
     return timedQuery("category.listHierarchy", "heavy", async () => {
       const rows = await sql<CategoryHierarchyRow[]>`
       WITH RECURSIVE category_tree AS (
+        -- Seed the tree with root categories.
         SELECT c.id, c.parent_id, c.name, c.slug, c.created_at, c.updated_at,
                ARRAY[c.id] AS path
         FROM categories c
@@ -176,12 +190,14 @@ export class PgCategoryRepository implements CategoryRepository {
 
         UNION ALL
 
+        -- Track each path so a cycle cannot repeat a category.
         SELECT c.id, c.parent_id, c.name, c.slug, c.created_at, c.updated_at,
                tree.path || c.id
         FROM categories c
         JOIN category_tree tree ON c.parent_id = tree.id
         WHERE NOT c.id = ANY(tree.path)
       ), counts AS (
+        -- Compare all rows with reachable rows to catch disconnected cycles.
         SELECT (SELECT count(*) FROM categories) AS total_categories,
                (SELECT count(*) FROM category_tree) AS reachable_categories
       )
@@ -202,6 +218,7 @@ export class PgCategoryRepository implements CategoryRepository {
       ORDER BY tree.id, attribute.key
     `;
 
+      // Fold the joined definition rows back into one object per category.
       const categories = new Map<string, CategoryWithAttributes>();
       for (const row of rows) {
         if (row.total_categories !== row.reachable_categories)
@@ -235,6 +252,7 @@ export class PgCategoryRepository implements CategoryRepository {
     });
   }
 
+  // Save the category and its definitions in one transaction.
   async create(data: NewCategory): Promise<CategoryWithAttributes> {
     return timedQuery("category.create", "light", async () => {
       try {
@@ -247,6 +265,7 @@ export class PgCategoryRepository implements CategoryRepository {
 
           if (!category) throw new Error("Category insert returned no row");
           for (const attribute of data.attributes ?? []) {
+            // Supply the text array type even when the options list is empty.
             await tx`
             INSERT INTO attribute_definitions (category_id, key, label, type, options)
             VALUES (${category.id}, ${attribute.key}, ${attribute.label}, ${attribute.type}, ${attribute.options == null ? null : tx.array(attribute.options, PG_TEXT_TYPE_OID)})
@@ -266,6 +285,7 @@ export class PgCategoryRepository implements CategoryRepository {
     });
   }
 
+  // Apply definition inserts, edits, and soft deletes alongside the category edit.
   async update(
     id: string,
     data: UpdateCategory,
@@ -274,7 +294,7 @@ export class PgCategoryRepository implements CategoryRepository {
       try {
         return await sql.begin(async (tx) => {
           if (typeof data.parent_id === "string") {
-            /** Arbitrary, must stay unique across the codebase: advisory lock key for category-parent moves. */
+            // Serialize parent moves before checking for a category cycle.
             const CATEGORY_PARENT_MOVE_LOCK_KEY = 724331;
             await tx`SELECT pg_advisory_xact_lock(${CATEGORY_PARENT_MOVE_LOCK_KEY}, 1)`;
             const [cycle] = await tx`
@@ -284,12 +304,14 @@ export class PgCategoryRepository implements CategoryRepository {
               SELECT c.id FROM categories c
               JOIN descendants d ON c.parent_id = d.id
             )
+            -- A category cannot move beneath one of its descendants.
             SELECT 1 FROM descendants WHERE id = ${data.parent_id}::uuid
           `;
             if (cycle) throw new CategoryInvalidParentError();
           }
           const [category] = await tx<Category[]>`
           UPDATE categories
+          -- Undefined leaves the parent unchanged; null moves to the root.
           SET parent_id = CASE WHEN ${data.parent_id !== undefined} THEN ${data.parent_id ?? null}::uuid ELSE parent_id END,
               name = COALESCE(${data.name ?? null}, name),
               slug = COALESCE(${data.slug ?? null}, slug),
@@ -305,6 +327,7 @@ export class PgCategoryRepository implements CategoryRepository {
             SELECT id, category_id, key, label, type, options, created_at, updated_at, deleted_at
             FROM attribute_definitions WHERE category_id = ${id} AND deleted_at IS NULL
           `;
+            // A supplied array replaces the active definition set by key.
             const diff = diffCategoryAttributes(existing, data.attributes);
 
             for (const key of diff.remove) {
@@ -317,6 +340,7 @@ export class PgCategoryRepository implements CategoryRepository {
               if (deleted) deletedAttributes.push(deleted);
             }
             for (const attribute of diff.update) {
+              // Keep options typed as text[] for empty lists too.
               await tx`
               UPDATE attribute_definitions
               SET label = ${attribute.label},
