@@ -3,12 +3,13 @@ import Elysia, { t } from "elysia";
 import { successSchema, withTimestamps } from "../response.validator";
 import { databaseUuidSchema } from "../uuid.validator";
 import { attributeFields, categoryFields } from "./attribute.validator";
+import { CategoryErrorsModel } from "./category-errors.validator";
 
 const categorySummarySchema = t.Object({
   ...withTimestamps(categoryFields, "created_at", "updated_at"),
 });
 
-export const GetCategoryModel = new Elysia().model({
+export const GetCategoryModel = new Elysia().use(CategoryErrorsModel).model({
   "category.detail.params": t.Object({ id: databaseUuidSchema }),
   "category.detail": successSchema(
     t.Object({

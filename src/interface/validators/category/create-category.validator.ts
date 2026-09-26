@@ -6,7 +6,6 @@ import {
   CategorySlugConflictError,
 } from "../../../domain/errors/category-error";
 import {
-  badRequestSchema,
   errorSchema,
   internalErrorSchema,
   successSchema,
@@ -16,8 +15,9 @@ import {
   categoryAttributeInputSchema,
   createdCategoryResponseSchema,
 } from "./attribute.validator";
+import { CategoryErrorsModel } from "./category-errors.validator";
 
-export const CreateCategoryModel = new Elysia().model({
+export const CreateCategoryModel = new Elysia().use(CategoryErrorsModel).model({
   "category.create.body": t.Object(
     {
       parent_id: t.Optional(t.Nullable(databaseUuidSchema)),
@@ -28,7 +28,6 @@ export const CreateCategoryModel = new Elysia().model({
     { additionalProperties: false },
   ),
   "category.created": successSchema(createdCategoryResponseSchema),
-  "category.bad_request": badRequestSchema,
   "category.conflict": t.Union([
     errorSchema(new CategorySlugConflictError()),
     errorSchema(new CategoryAttributeKeyConflictError()),

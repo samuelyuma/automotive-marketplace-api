@@ -1,7 +1,7 @@
 import { createClient } from "redis";
 
-import { env } from "../../main/config/env";
-import { logger } from "../logging/logger";
+import { env } from "../../../main/config/env";
+import { logger } from "../../logging/logger";
 
 export const redis = createClient({
   url: env.REDIS_URL,

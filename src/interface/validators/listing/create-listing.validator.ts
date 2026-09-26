@@ -1,6 +1,7 @@
 import Elysia, { t } from "elysia";
 
 import { ListingCategoryNotFoundError } from "../../../domain/errors/listing-error";
+import { PG_INT32_MAX } from "../../../domain/postgres";
 import {
   badRequestSchema,
   errorSchema,
@@ -23,7 +24,7 @@ export const CreateListingModel = new Elysia().model({
       fuel_type: t.Optional(t.Nullable(fuelTypeSchema)),
       transmission: t.Optional(t.Nullable(transmissionSchema)),
       engine_cc: t.Optional(
-        t.Nullable(t.Integer({ minimum: 0, maximum: 2147483647 })),
+        t.Nullable(t.Integer({ minimum: 0, maximum: PG_INT32_MAX })),
       ),
     },
     { additionalProperties: false },

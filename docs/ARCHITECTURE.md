@@ -47,7 +47,9 @@ flowchart LR
 │   ├── infrastructure/
 │   │   ├── logging/               # Logging and request trace context
 │   │   ├── postgres/              # PostgreSQL client, health, query timing, and migrations
-│   │   └── redis/                  # Redis clients, cache, and health checks
+│   │   └── cache/                  # Cache backends, backend selection, and health checks
+│   │       ├── redis/              # Local TCP Redis client and cache
+│   │       └── upstash/            # Upstash REST client, cache, and rate limiting
 │   ├── interface/
 │   │   ├── controllers/           # HTTP routes
 │   │   ├── http/                  # HTTP response and cache helpers
@@ -130,7 +132,7 @@ Redis caches listing reads and suggestions for 60 seconds, and category and filt
 
 ## Validation and Errors
 
-Elysia validates request paths, query strings, and bodies against TypeBox schemas. Unknown query parameters are rejected by the listing search and suggestion routes. Range pairs are checked so a minimum cannot exceed its maximum, and a cursor must match the current sort and direction.
+Elysia validates request paths, query strings, and bodies against TypeBox schemas. Unknown query parameters are rejected by the listing, category-listing, search, suggestion, and filter routes. Range pairs are checked so a minimum cannot exceed its maximum, and a cursor must match the current sort and direction.
 
 Errors use a shared JSON shape with `success`, `message`, and an `error` object. Request validation and parse errors return 400. Domain errors map to 400, 404, 409, or 422 according to their kind. Unexpected errors return 500 without exposing exception details. Each request receives an ID used in logs and error context.
 

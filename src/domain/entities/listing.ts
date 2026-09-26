@@ -1,7 +1,23 @@
-export type ListingCondition = "NEW" | "USED" | "CERTIFIED";
-export type ListingStatus = "AVAILABLE" | "PENDING" | "SOLD" | "REMOVED";
-export type FuelType = "PETROL" | "DIESEL" | "HYBRID" | "ELECTRIC";
-export type Transmission = "MANUAL" | "AUTOMATIC";
+export const LISTING_CONDITIONS = ["NEW", "USED", "CERTIFIED"] as const;
+export type ListingCondition = (typeof LISTING_CONDITIONS)[number];
+
+export const FUEL_TYPES = ["PETROL", "DIESEL", "HYBRID", "ELECTRIC"] as const;
+export type FuelType = (typeof FUEL_TYPES)[number];
+
+export const TRANSMISSIONS = ["MANUAL", "AUTOMATIC"] as const;
+export type Transmission = (typeof TRANSMISSIONS)[number];
+
+export const LISTING_STATUSES = [
+  "AVAILABLE",
+  "PENDING",
+  "SOLD",
+  "REMOVED",
+] as const;
+export type ListingStatus = (typeof LISTING_STATUSES)[number];
+
+export const UPDATABLE_LISTING_STATUSES = LISTING_STATUSES.filter(
+  (s): s is Exclude<ListingStatus, "REMOVED"> => s !== "REMOVED",
+);
 
 export type Listing = {
   id: string;

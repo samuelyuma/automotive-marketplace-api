@@ -13,6 +13,12 @@ function resultFields(value: unknown) {
   return {};
 }
 
+/**
+ * Wraps a service/repository instance in a Proxy so every method call is
+ * automatically logged (started/completed/failed) with timing, without each
+ * method having to do it manually. Used by main/container.ts to instrument
+ * every service and repository the same way.
+ */
 export function traceLayer<T extends object>(
   layer: "service" | "repository",
   component: string,

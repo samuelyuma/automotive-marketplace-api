@@ -1,5 +1,5 @@
 import { InvalidListingCursorError } from "../../domain/errors/listing-error";
-import { databaseUuidPattern } from "../../domain/uuid";
+import { PG_INT32_MAX, PG_UUID_REGEX } from "../../domain/postgres";
 import type {
   ListingCursor,
   ListingDirection,
@@ -33,7 +33,7 @@ export function decodeListingCursor(
       value.sort !== sort ||
       value.direction !== direction ||
       typeof value.id !== "string" ||
-      !databaseUuidPattern.test(value.id) ||
+      !PG_UUID_REGEX.test(value.id) ||
       typeof value.value !== "string"
     )
       throw new Error();
@@ -57,7 +57,7 @@ export function decodeListingCursor(
         sort === "year"
           ? 2100
           : sort === "mileage"
-            ? 2147483647
+            ? PG_INT32_MAX
             : Number.MAX_SAFE_INTEGER;
       if (
         !/^\d+$/.test(value.value) ||

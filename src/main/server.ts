@@ -1,8 +1,9 @@
 import openapi from "@elysia/openapi";
 import Elysia from "elysia";
 
+import { isUpstashBackend } from "../infrastructure/cache/redis-backend";
+import { checkUpstashRateLimit } from "../infrastructure/cache/upstash/upstash-client";
 import { logger } from "../infrastructure/logging/logger";
-import { checkUpstashRateLimit } from "../infrastructure/redis/upstash";
 import { createCategoryController } from "../interface/controllers/category.controller";
 import { createFilterController } from "../interface/controllers/filter.controller";
 import { healthController } from "../interface/controllers/health.controller";
@@ -17,7 +18,7 @@ import { buildContainer, type Container } from "./container";
 
 export function createApp({
   container = buildContainer(),
-  rateLimitEnabled = env.REDIS_BACKEND === "upstash",
+  rateLimitEnabled = isUpstashBackend,
   rateLimitCheck = checkUpstashRateLimit,
 }: {
   container?: Container;

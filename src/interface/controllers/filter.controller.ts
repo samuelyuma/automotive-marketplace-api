@@ -2,11 +2,8 @@ import Elysia from "elysia";
 
 import type { Container } from "../../main/container";
 import { cachedRead } from "../http/read-cache";
-import {
-  errorResponse,
-  standardErrors,
-  successResponse,
-} from "../http/response";
+import { successResponse } from "../http/response";
+import { assertNoUnknownQueryParams } from "../http/strict-query";
 import {
   FilterModel,
   getCategoryFiltersRouteDetail,
@@ -14,14 +11,7 @@ import {
 } from "../validators/filter.validator";
 import { RateLimitModel } from "../validators/response.validator";
 
-function unknownQueryError(request: Request) {
-  if (new URL(request.url).searchParams.size === 0) return null;
-  return errorResponse(
-    standardErrors.validation.code,
-    standardErrors.validation.message,
-    [{ field: "query", issue: "Unknown query parameter" }],
-  );
-}
+const filterQueryKeys: ReadonlySet<string> = new Set([]);
 
 export function createFilterController({ cache, filterService }: Container) {
   return new Elysia({ prefix: "/filters" })
@@ -29,9 +19,9 @@ export function createFilterController({ cache, filterService }: Container) {
     .use(RateLimitModel)
     .get(
       "",
-      async ({ request, status }) => {
-        const error = unknownQueryError(request);
-        if (error) return status(400, error);
+      async ({ request }) => {
+        assertNoUnknownQueryParams(request, filterQueryKeys);
+
         return cachedRead(
           cache,
           request,
@@ -56,9 +46,9 @@ export function createFilterController({ cache, filterService }: Container) {
     )
     .get(
       "/:categoryId",
-      async ({ params, request, status }) => {
-        const error = unknownQueryError(request);
-        if (error) return status(400, error);
+      async ({ params, request }) => {
+        assertNoUnknownQueryParams(request, filterQueryKeys);
+
         return cachedRead(
           cache,
           request,

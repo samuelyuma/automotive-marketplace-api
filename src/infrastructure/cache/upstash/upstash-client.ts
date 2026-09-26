@@ -1,12 +1,11 @@
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 
-import { env } from "../../main/config/env";
+import { env } from "../../../main/config/env";
+import { isUpstashBackend } from "../redis-backend";
 
 const redis =
-  env.REDIS_BACKEND === "upstash" &&
-  env.UPSTASH_REDIS_REST_URL &&
-  env.UPSTASH_REDIS_REST_TOKEN
+  isUpstashBackend && env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN
     ? new Redis({
         url: env.UPSTASH_REDIS_REST_URL,
         token: env.UPSTASH_REDIS_REST_TOKEN,

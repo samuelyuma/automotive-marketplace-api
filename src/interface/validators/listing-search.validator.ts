@@ -29,12 +29,12 @@ export const SearchListingsModel = new Elysia().model({
       condition: t.Optional(conditionSchema),
       fuel_type: t.Optional(fuelTypeSchema),
       transmission: t.Optional(transmissionSchema),
-      price_min: t.Optional(listingPriceQuerySchema),
-      price_max: t.Optional(listingPriceQuerySchema),
-      year_min: t.Optional(listingYearQuerySchema),
-      year_max: t.Optional(listingYearQuerySchema),
-      mileage_min: t.Optional(listingMileageQuerySchema),
-      mileage_max: t.Optional(listingMileageQuerySchema),
+      min_price: t.Optional(listingPriceQuerySchema),
+      max_price: t.Optional(listingPriceQuerySchema),
+      min_year: t.Optional(listingYearQuerySchema),
+      max_year: t.Optional(listingYearQuerySchema),
+      min_mileage: t.Optional(listingMileageQuerySchema),
+      max_mileage: t.Optional(listingMileageQuerySchema),
       location: t.Optional(t.String({ minLength: 1 })),
       sort: t.Optional(
         t.Union([

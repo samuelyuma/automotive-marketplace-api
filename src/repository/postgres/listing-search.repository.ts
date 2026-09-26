@@ -13,6 +13,7 @@ import { InvalidListingSearchQueryError } from "../../domain/errors/listing-erro
 import { sql } from "../../infrastructure/postgres/client";
 import { timedQuery } from "../../infrastructure/postgres/timed-query";
 import { categoryScopeIds } from "./category-scope";
+import { listingColumns } from "./listing-row";
 
 type ListingRow = Omit<Listing, "price"> & { price: string };
 type ListingPageRow = ListingRow & { cursor_value: string };
@@ -118,6 +119,9 @@ export class PgListingSearchRepository implements ListingSearchRepository {
       AND (${query.max_mileage ?? null}::integer IS NULL OR mileage <= ${query.max_mileage ?? null}::integer)
       AND (${query.location ?? null}::text IS NULL OR lower(location) = lower(${query.location ?? null}::text))
     `;
+    // `make` is filtered separately from `filters` so the facet query below can
+    // reuse `filters` to count listings per make under every OTHER active
+    // filter, without make itself narrowing the facet counts.
     const makeFilter = sql`AND (${query.make ?? null}::text IS NULL OR lower(make) = lower(${query.make ?? null}::text))`;
 
     const strategy = sortStrategies[query.sort];
@@ -134,9 +138,7 @@ export class PgListingSearchRepository implements ListingSearchRepository {
     const [rows, facetRows] = await timedQuery("listing.list", "heavy", () =>
       Promise.all([
         sql<ListingPageRow[]>`
-        SELECT id, category_id, make, model, year, price, mileage,
-               condition, color, location, status, image_url, fuel_type,
-               transmission, engine_cc, created_at, updated_at,
+        SELECT ${listingColumns},
                ${sortColumn}::text AS cursor_value
         FROM vehicle_listings
         WHERE ${filters}

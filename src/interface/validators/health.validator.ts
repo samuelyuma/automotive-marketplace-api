@@ -39,6 +39,9 @@ export const healthRouteDetail = {
   tags: ["Health"],
 };
 
-export type HealthResponse = typeof healthFields extends infer _
-  ? { app: "ok"; db: "up" | "down"; redis: "up" | "down"; timestamp: string }
-  : never;
+export type HealthResponse = {
+  app: "ok";
+  db: "up" | "down";
+  redis: "up" | "down";
+  timestamp: string;
+};

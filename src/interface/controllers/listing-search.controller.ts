@@ -1,9 +1,9 @@
 import Elysia from "elysia";
 
-import { InvalidListingSearchQueryError } from "../../domain/errors/listing-error";
 import type { Container } from "../../main/container";
 import { cachedRead } from "../http/read-cache";
 import { paginatedResponse, successResponse } from "../http/response";
+import { assertNoUnknownQueryParams } from "../http/strict-query";
 import { toListingDetail } from "../presenters/listing.presenter";
 import {
   SearchListingsModel,
@@ -23,12 +23,12 @@ const searchQueryKeys = new Set([
   "condition",
   "fuel_type",
   "transmission",
-  "price_min",
-  "price_max",
-  "year_min",
-  "year_max",
-  "mileage_min",
-  "mileage_max",
+  "min_price",
+  "max_price",
+  "min_year",
+  "max_year",
+  "min_mileage",
+  "max_mileage",
   "location",
   "sort",
   "direction",
@@ -48,11 +48,8 @@ export function createListingSearchController({
     .get(
       "/suggest",
       async ({ query, request }) => {
-        const unknown = [...new URL(request.url).searchParams.keys()].find(
-          (key) => !suggestQueryKeys.has(key),
-        );
-        if (unknown !== undefined)
-          throw new InvalidListingSearchQueryError(unknown);
+        assertNoUnknownQueryParams(request, suggestQueryKeys);
+
         return cachedRead(
           cache,
           request,
@@ -78,11 +75,8 @@ export function createListingSearchController({
     .get(
       "",
       async ({ query, request }) => {
-        const unknown = [...new URL(request.url).searchParams.keys()].find(
-          (key) => !searchQueryKeys.has(key),
-        );
-        if (unknown !== undefined)
-          throw new InvalidListingSearchQueryError(unknown);
+        assertNoUnknownQueryParams(request, searchQueryKeys);
+
         return cachedRead(
           cache,
           request,
@@ -95,18 +89,19 @@ export function createListingSearchController({
               condition: query.condition,
               fuel_type: query.fuel_type,
               transmission: query.transmission,
-              min_price: query.price_min,
-              max_price: query.price_max,
-              min_year: query.year_min,
-              max_year: query.year_max,
-              min_mileage: query.mileage_min,
-              max_mileage: query.mileage_max,
+              min_price: query.min_price,
+              max_price: query.max_price,
+              min_year: query.min_year,
+              max_year: query.max_year,
+              min_mileage: query.min_mileage,
+              max_mileage: query.max_mileage,
               location: query.location,
               sort: query.sort,
               direction: query.direction,
               per_page: query.per_page,
               cursor: query.cursor,
             });
+
             return paginatedResponse(
               page.data.map(toListingDetail),
               "Listings found",

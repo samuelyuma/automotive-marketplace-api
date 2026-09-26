@@ -11,6 +11,7 @@ import { ListingCategoryNotFoundError } from "../../domain/errors/listing-error"
 import { sql } from "../../infrastructure/postgres/client";
 import { timedQuery } from "../../infrastructure/postgres/timed-query";
 import { CONSTRAINTS } from "./constraint-names";
+import { listingColumns } from "./listing-row";
 
 type ListingRow = Omit<Listing, "price"> & { price: string };
 
@@ -32,12 +33,10 @@ export class PgListingRepository implements ListingRepository {
   async getById(id: string): Promise<Listing | null> {
     return timedQuery("listing.getById", "light", async () => {
       const [listing] = await sql<ListingRow[]>`
-      SELECT id, category_id, make, model, year, price, mileage,
-             condition, color, location, status, image_url, fuel_type,
-             transmission, engine_cc, created_at, updated_at
-      FROM vehicle_listings
-      WHERE id = ${id} AND status <> 'REMOVED'
-    `;
+          SELECT ${listingColumns}
+          FROM vehicle_listings
+          WHERE id = ${id} AND status <> 'REMOVED'
+        `;
       return listing ? toListing(listing) : null;
     });
   }
@@ -55,9 +54,7 @@ export class PgListingRepository implements ListingRepository {
           ${data.location}, ${data.image_url ?? null}, ${data.fuel_type ?? null},
           ${data.transmission ?? null}, ${data.engine_cc ?? null}
         )
-        RETURNING id, category_id, make, model, year, price, mileage,
-                  condition, color, location, status, image_url, fuel_type,
-                  transmission, engine_cc, created_at, updated_at
+        RETURNING ${listingColumns}
       `;
         if (!listing) throw new Error("Listing insert returned no row");
         return toListing(listing);

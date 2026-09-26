@@ -2,7 +2,6 @@ import Elysia, { t } from "elysia";
 
 import {
   CategoryInvalidParentError,
-  CategoryNotFoundError,
   CategoryParentNotFoundError,
 } from "../../../domain/errors/category-error";
 import { errorSchema, successSchema } from "../response.validator";
@@ -11,8 +10,9 @@ import {
   categoryAttributeInputSchema,
   updatedCategoryResponseSchema,
 } from "./attribute.validator";
+import { CategoryErrorsModel } from "./category-errors.validator";
 
-export const UpdateCategoryModel = new Elysia().model({
+export const UpdateCategoryModel = new Elysia().use(CategoryErrorsModel).model({
   "category.update.params": t.Object({ id: databaseUuidSchema }),
   "category.update.body": t.Object(
     {
@@ -24,7 +24,6 @@ export const UpdateCategoryModel = new Elysia().model({
     { additionalProperties: false, minProperties: 1 },
   ),
   "category.updated": successSchema(updatedCategoryResponseSchema),
-  "category.not_found": errorSchema(new CategoryNotFoundError()),
   "category.update.invalid_parent": t.Union([
     errorSchema(new CategoryParentNotFoundError()),
     errorSchema(new CategoryInvalidParentError()),

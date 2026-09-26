@@ -44,28 +44,26 @@ export function successResponse<T>(data: T, message: string) {
   return { success: true as const, message, data };
 }
 
+export type PaginatedResponse<T, F extends object | undefined = undefined> = {
+  success: true;
+  message: string;
+  data: T[];
+  meta: PaginationMeta;
+} & ([F] extends [undefined] ? unknown : { facets: F });
+
 export function paginatedResponse<T, F extends object>(
   data: T[],
   message: string,
   meta: PaginationMeta,
   facets: F,
-): {
-  success: true;
-  message: string;
-  data: T[];
-  meta: PaginationMeta;
-  facets: F;
-};
+): PaginatedResponse<T, F>;
+
 export function paginatedResponse<T>(
   data: T[],
   message: string,
   meta: PaginationMeta,
-): {
-  success: true;
-  message: string;
-  data: T[];
-  meta: PaginationMeta;
-};
+): PaginatedResponse<T>;
+
 export function paginatedResponse<T, F extends object>(
   data: T[],
   message: string,

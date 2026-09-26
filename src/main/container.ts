@@ -3,14 +3,20 @@ import { CategoryService } from "../application/service/category.service";
 import { FilterService } from "../application/service/filter.service";
 import { ListingService } from "../application/service/listing.service";
 import { ListingSearchService } from "../application/service/listing-search.service";
+import { TcpRedisCache } from "../infrastructure/cache/redis/cache";
+import { isUpstashBackend } from "../infrastructure/cache/redis-backend";
+import { UpstashRedisCache } from "../infrastructure/cache/upstash/upstash-cache";
 import { traceLayer } from "../infrastructure/logging/trace-layer";
-import { RedisCache } from "../infrastructure/redis/cache";
 import { PgCategoryRepository } from "../repository/postgres/category.repository";
 import { PgFilterRepository } from "../repository/postgres/filter.repository";
 import { PgListingRepository } from "../repository/postgres/listing.repository";
 import { PgListingSearchRepository } from "../repository/postgres/listing-search.repository";
 
-export function buildContainer(cache: CachePort = new RedisCache()) {
+export function buildContainer(
+  cache: CachePort = isUpstashBackend
+    ? new UpstashRedisCache()
+    : new TcpRedisCache(),
+) {
   const categoryRepository = traceLayer(
     "repository",
     "category",

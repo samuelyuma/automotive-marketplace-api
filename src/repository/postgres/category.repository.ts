@@ -18,6 +18,7 @@ import {
   CategorySlugConflictError,
 } from "../../domain/errors/category-error";
 import { diffCategoryAttributes } from "../../domain/policies/category-attribute-diff";
+import { PG_TEXT_TYPE_OID } from "../../domain/postgres";
 import { sql } from "../../infrastructure/postgres/client";
 import { timedQuery } from "../../infrastructure/postgres/timed-query";
 import { CONSTRAINTS } from "./constraint-names";
@@ -77,6 +78,43 @@ type CategoryDetailRow = Category & {
   attribute_updated_at: Date | null;
 };
 
+type AttributeJoinColumns = {
+  attribute_id: string | null;
+  attribute_key: string | null;
+  attribute_label: string | null;
+  attribute_type: CategoryAttribute["type"] | null;
+  attribute_options: string[] | null;
+  attribute_created_at: Date | null;
+  attribute_updated_at: Date | null;
+};
+
+function toCategoryAttribute(
+  row: AttributeJoinColumns,
+  categoryId: string,
+): CategoryAttribute | null {
+  if (row.attribute_id === null) return null;
+  if (
+    row.attribute_key === null ||
+    row.attribute_label === null ||
+    row.attribute_type === null ||
+    row.attribute_created_at === null ||
+    row.attribute_updated_at === null
+  )
+    throw new Error("Category attribute row is incomplete");
+
+  return {
+    id: row.attribute_id,
+    category_id: categoryId,
+    key: row.attribute_key,
+    label: row.attribute_label,
+    type: row.attribute_type,
+    options: row.attribute_options,
+    created_at: row.attribute_created_at,
+    updated_at: row.attribute_updated_at,
+    deleted_at: null,
+  };
+}
+
 export class PgCategoryRepository implements CategoryRepository {
   async getWithChildren(id: string): Promise<CategoryDetail | null> {
     return timedQuery("category.getWithChildren", "light", async () => {
@@ -101,26 +139,8 @@ export class PgCategoryRepository implements CategoryRepository {
 
       const attributes: CategoryAttribute[] = [];
       for (const row of rows) {
-        if (row.attribute_id === null) continue;
-        if (
-          row.attribute_key === null ||
-          row.attribute_label === null ||
-          row.attribute_type === null ||
-          row.attribute_created_at === null ||
-          row.attribute_updated_at === null
-        )
-          throw new Error("Category attribute row is incomplete");
-        attributes.push({
-          id: row.attribute_id,
-          category_id: id,
-          key: row.attribute_key,
-          label: row.attribute_label,
-          type: row.attribute_type,
-          options: row.attribute_options,
-          created_at: row.attribute_created_at,
-          updated_at: row.attribute_updated_at,
-          deleted_at: null,
-        });
+        const attribute = toCategoryAttribute(row, id);
+        if (attribute) attributes.push(attribute);
       }
 
       const children = await sql<Category[]>`
@@ -208,27 +228,8 @@ export class PgCategoryRepository implements CategoryRepository {
           };
           categories.set(row.id, category);
         }
-        if (row.attribute_id !== null) {
-          if (
-            row.attribute_key === null ||
-            row.attribute_label === null ||
-            row.attribute_type === null ||
-            row.attribute_created_at === null ||
-            row.attribute_updated_at === null
-          )
-            throw new Error("Category attribute row is incomplete");
-          category.attributes.push({
-            id: row.attribute_id,
-            category_id: row.id,
-            key: row.attribute_key,
-            label: row.attribute_label,
-            type: row.attribute_type,
-            options: row.attribute_options,
-            created_at: row.attribute_created_at,
-            updated_at: row.attribute_updated_at,
-            deleted_at: null,
-          });
-        }
+        const attribute = toCategoryAttribute(row, row.id);
+        if (attribute) category.attributes.push(attribute);
       }
       return [...categories.values()];
     });
@@ -248,7 +249,7 @@ export class PgCategoryRepository implements CategoryRepository {
           for (const attribute of data.attributes ?? []) {
             await tx`
             INSERT INTO attribute_definitions (category_id, key, label, type, options)
-            VALUES (${category.id}, ${attribute.key}, ${attribute.label}, ${attribute.type}, ${attribute.options == null ? null : tx.array(attribute.options, 25)})
+            VALUES (${category.id}, ${attribute.key}, ${attribute.label}, ${attribute.type}, ${attribute.options == null ? null : tx.array(attribute.options, PG_TEXT_TYPE_OID)})
           `;
           }
 
@@ -273,8 +274,9 @@ export class PgCategoryRepository implements CategoryRepository {
       try {
         return await sql.begin(async (tx) => {
           if (typeof data.parent_id === "string") {
-            // Serialize parent moves so two concurrent updates cannot create a cycle.
-            await tx`SELECT pg_advisory_xact_lock(724331, 1)`;
+            /** Arbitrary, must stay unique across the codebase: advisory lock key for category-parent moves. */
+            const CATEGORY_PARENT_MOVE_LOCK_KEY = 724331;
+            await tx`SELECT pg_advisory_xact_lock(${CATEGORY_PARENT_MOVE_LOCK_KEY}, 1)`;
             const [cycle] = await tx`
             WITH RECURSIVE descendants AS (
               SELECT id FROM categories WHERE id = ${id}
@@ -319,7 +321,7 @@ export class PgCategoryRepository implements CategoryRepository {
               UPDATE attribute_definitions
               SET label = ${attribute.label},
                   type = ${attribute.type},
-                  options = ${attribute.options == null ? null : tx.array(attribute.options, 25)},
+                  options = ${attribute.options == null ? null : tx.array(attribute.options, PG_TEXT_TYPE_OID)},
                   updated_at = now()
               WHERE category_id = ${id} AND key = ${attribute.key} AND deleted_at IS NULL
             `;
@@ -327,7 +329,7 @@ export class PgCategoryRepository implements CategoryRepository {
             for (const attribute of diff.insert) {
               await tx`
               INSERT INTO attribute_definitions (category_id, key, label, type, options)
-              VALUES (${id}, ${attribute.key}, ${attribute.label}, ${attribute.type}, ${attribute.options == null ? null : tx.array(attribute.options, 25)})
+              VALUES (${id}, ${attribute.key}, ${attribute.label}, ${attribute.type}, ${attribute.options == null ? null : tx.array(attribute.options, PG_TEXT_TYPE_OID)})
             `;
             }
           }

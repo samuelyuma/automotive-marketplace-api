@@ -1,4 +1,9 @@
 import type { CategoryAttribute } from "../../domain/entities/category";
+import {
+  FUEL_TYPES,
+  LISTING_CONDITIONS,
+  TRANSMISSIONS,
+} from "../../domain/entities/listing";
 import { CategoryNotFoundError } from "../../domain/errors/category-error";
 import type { CategoryRepository } from "../ports/category-repository.port";
 import type {
@@ -7,20 +12,19 @@ import type {
   FilterStats,
 } from "../ports/filter-repository.port";
 
-const conditionValues = ["NEW", "USED", "CERTIFIED"];
-const fuelTypeValues = ["PETROL", "DIESEL", "HYBRID", "ELECTRIC"];
-const transmissionValues = ["MANUAL", "AUTOMATIC"];
-
-function includeUnused(values: string[], counts: FilterCount[]): FilterCount[] {
+function includeUnused(
+  values: readonly string[],
+  counts: FilterCount[],
+): FilterCount[] {
   const byValue = new Map(counts.map(({ value, count }) => [value, count]));
   return values.map((value) => ({ value, count: byValue.get(value) ?? 0 }));
 }
 
 function fixedFilters(stats: FilterStats) {
   return {
-    condition: includeUnused(conditionValues, stats.condition),
-    fuel_type: includeUnused(fuelTypeValues, stats.fuel_type),
-    transmission: includeUnused(transmissionValues, stats.transmission),
+    condition: includeUnused(LISTING_CONDITIONS, stats.condition),
+    fuel_type: includeUnused(FUEL_TYPES, stats.fuel_type),
+    transmission: includeUnused(TRANSMISSIONS, stats.transmission),
     price: stats.price,
     year: stats.year,
     mileage: stats.mileage,

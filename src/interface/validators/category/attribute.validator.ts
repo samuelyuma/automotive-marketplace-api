@@ -3,6 +3,9 @@ import { t } from "elysia";
 import { withTimestamps } from "../response.validator";
 import { databaseUuidSchema } from "../uuid.validator";
 
+/** Business rule: an attribute may offer at most this many enum options. */
+export const MAX_ATTRIBUTE_OPTIONS = 25;
+
 export const categoryAttributeInputSchema = t.Object(
   {
     key: t.String({ minLength: 1 }),
@@ -12,7 +15,9 @@ export const categoryAttributeInputSchema = t.Object(
       t.Literal("RANGE"),
       t.Literal("BOOLEAN"),
     ]),
-    options: t.Optional(t.Nullable(t.Array(t.String(), { maxItems: 25 }))),
+    options: t.Optional(
+      t.Nullable(t.Array(t.String(), { maxItems: MAX_ATTRIBUTE_OPTIONS })),
+    ),
   },
   { additionalProperties: false },
 );

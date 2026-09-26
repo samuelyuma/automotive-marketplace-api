@@ -1,5 +1,6 @@
 import Elysia, { t } from "elysia";
 
+import { UPDATABLE_LISTING_STATUSES } from "../../../domain/entities/listing";
 import {
   ListingCategoryNotFoundError,
   ListingNotFoundError,
@@ -17,6 +18,8 @@ import {
   transmissionSchema,
 } from "./listing-fields.validator";
 
+type UpdatableStatus = NonNullable<(typeof UPDATABLE_LISTING_STATUSES)[number]>;
+
 export const UpdateListingModel = new Elysia().model({
   "listing.update.params": t.Object({ id: databaseUuidSchema }),
   "listing.update.body": t.Object(
@@ -32,17 +35,14 @@ export const UpdateListingModel = new Elysia().model({
       location: t.Optional(listingFields.location),
       status: t.Optional(
         t.Union([
-          t.Literal("AVAILABLE"),
-          t.Literal("PENDING"),
-          t.Literal("SOLD"),
+          t.Literal(UPDATABLE_LISTING_STATUSES[0] as UpdatableStatus),
+          t.Literal(UPDATABLE_LISTING_STATUSES[1] as UpdatableStatus),
+          t.Literal(UPDATABLE_LISTING_STATUSES[2] as UpdatableStatus),
         ]),
       ),
       image_url: t.Optional(t.Nullable(t.String())),
       fuel_type: t.Optional(t.Nullable(fuelTypeSchema)),
       transmission: t.Optional(t.Nullable(transmissionSchema)),
-      engine_cc: t.Optional(
-        t.Nullable(t.Integer({ minimum: 0, maximum: 2147483647 })),
-      ),
     },
     { additionalProperties: false, minProperties: 1 },
   ),

@@ -1,9 +1,12 @@
 import Elysia from "elysia";
 
-import { InvalidListingSearchQueryError } from "../../domain/errors/listing-error";
 import type { Container } from "../../main/container";
 import { cachedRead, invalidateReadCache } from "../http/read-cache";
 import { paginatedResponse, successResponse } from "../http/response";
+import {
+  assertNoUnknownQueryParams,
+  listingBrowseQueryKeys,
+} from "../http/strict-query";
 import {
   toCreatedListing,
   toListingDetail,
@@ -31,26 +34,6 @@ import {
 } from "../validators/listing/update-listing.validator";
 import { RateLimitModel } from "../validators/response.validator";
 
-const listQueryKeys = new Set([
-  "category_id",
-  "make",
-  "model",
-  "condition",
-  "fuel_type",
-  "transmission",
-  "min_year",
-  "max_year",
-  "min_price",
-  "max_price",
-  "min_mileage",
-  "max_mileage",
-  "location",
-  "sort",
-  "direction",
-  "per_page",
-  "cursor",
-]);
-
 export function createListingController({
   cache,
   listingService,
@@ -66,11 +49,8 @@ export function createListingController({
     .get(
       "",
       async ({ query, request }) => {
-        const unknown = [...new URL(request.url).searchParams.keys()].find(
-          (key) => !listQueryKeys.has(key),
-        );
-        if (unknown !== undefined)
-          throw new InvalidListingSearchQueryError(unknown);
+        assertNoUnknownQueryParams(request, listingBrowseQueryKeys);
+
         return cachedRead(
           cache,
           request,
@@ -81,6 +61,7 @@ export function createListingController({
               direction: query.direction ?? "desc",
               per_page: query.per_page ?? 20,
             });
+
             return paginatedResponse(
               page.data.map(toListingDetail),
               "Listings retrieved",

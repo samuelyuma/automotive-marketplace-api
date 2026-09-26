@@ -1,9 +1,12 @@
 import Elysia from "elysia";
 
-import { InvalidListingSearchQueryError } from "../../domain/errors/listing-error";
 import type { Container } from "../../main/container";
 import { cachedRead, invalidateReadCache } from "../http/read-cache";
 import { paginatedResponse, successResponse } from "../http/response";
+import {
+  assertNoUnknownQueryParams,
+  listingBrowseQueryKeys,
+} from "../http/strict-query";
 import {
   toCategoryDetail,
   toCategoryTree,
@@ -32,26 +35,6 @@ import {
   listCategoryListingsRouteDetail,
 } from "../validators/listing/list-listings.validator";
 import { RateLimitModel } from "../validators/response.validator";
-
-const categoryListingsQueryKeys = new Set([
-  "category_id",
-  "make",
-  "model",
-  "condition",
-  "fuel_type",
-  "transmission",
-  "min_year",
-  "max_year",
-  "min_price",
-  "max_price",
-  "min_mileage",
-  "max_mileage",
-  "location",
-  "sort",
-  "direction",
-  "per_page",
-  "cursor",
-]);
 
 export function createCategoryController({
   cache,
@@ -90,11 +73,8 @@ export function createCategoryController({
     .get(
       "/:id/listings",
       async ({ params, query, request }) => {
-        const unknown = [...new URL(request.url).searchParams.keys()].find(
-          (key) => !categoryListingsQueryKeys.has(key),
-        );
-        if (unknown !== undefined)
-          throw new InvalidListingSearchQueryError(unknown);
+        assertNoUnknownQueryParams(request, listingBrowseQueryKeys);
+
         return cachedRead(
           cache,
           request,
@@ -107,6 +87,7 @@ export function createCategoryController({
               direction: query.direction ?? "desc",
               per_page: query.per_page ?? 20,
             });
+
             return paginatedResponse(
               page.data.map(toListingDetail),
               "Listings retrieved",
@@ -164,7 +145,9 @@ export function createCategoryController({
           ...body,
           parent_id: body.parent_id ?? null,
         });
+
         await invalidateReadCache(cache, ["categories", "filters", "listings"]);
+
         return status(
           201,
           successResponse(toCreatedCategory(category), "Category created"),

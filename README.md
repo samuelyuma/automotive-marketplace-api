@@ -158,7 +158,7 @@ The seed creates 500 repeatable listings across nine vehicle categories in a 10-
 | `GET` | `/api/listings/search` | Search available listings with text and structured filters. |
 | `GET` | `/api/listings/search/suggest` | Return prefix suggestions for makes, models, or locations. |
 
-The Scalar API reference linked in [Live API](#live-api) documents endpoint parameters and schemas. For `/api/listings`, range filters use names such as `min_price` and `max_year`. `/api/listings/search` uses `price_min` and `year_max` instead. Both endpoints return a `next_cursor` for the following page.
+The Scalar API reference linked in [Live API](#live-api) documents endpoint parameters and schemas. Range filters use `min_*`/`max_*` names (`min_price`, `max_price`, `min_year`, `max_year`, `min_mileage`, `max_mileage`) on both `/api/listings` and `/api/listings/search`. Unknown query parameters are rejected with a 400 on all listing, search, suggestion, and filter routes. Both endpoints return a `next_cursor` for the following page.
 
 ## Schema Diagram
 
@@ -172,7 +172,7 @@ The code separates HTTP controllers, application services, domain types and poli
 
 Fields used for listing filters and search are stored in typed relational columns. Categories use a parent reference, and recursive queries include descendant listings. Category attribute definitions describe available filters, but arbitrary per-listing attribute values are not stored. The [DBML schema](docs/schema.dbml) is the source for the ER diagram.
 
-The architecture guide explains code boundaries, category-tree behavior, search queries, indexes, pagination, request flow, and current trade-offs. The database diagram link is above.
+The [architecture guide](docs/ARCHITECTURE.md) explains code boundaries, category-tree behavior, search queries, indexes, pagination, request flow, and current trade-offs. The database diagram link is above.
 
 ## Deployment
 

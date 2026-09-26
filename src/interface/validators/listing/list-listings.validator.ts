@@ -1,5 +1,6 @@
 import Elysia, { t } from "elysia";
 
+import { PG_INT32_MAX } from "../../../domain/postgres";
 import {
   badRequestSchema,
   internalErrorSchema,
@@ -26,7 +27,7 @@ export const listingPriceQuerySchema = t.Numeric({
 });
 export const listingMileageQuerySchema = t.Numeric({
   minimum: 0,
-  maximum: 2147483647,
+  maximum: PG_INT32_MAX,
   multipleOf: 1,
 });
 

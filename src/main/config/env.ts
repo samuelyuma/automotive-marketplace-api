@@ -30,15 +30,29 @@ type Env = typeof EnvSchema.static;
 
 function loadEnv(): Env {
   const input = Value.Default(EnvSchema, { ...process.env });
+
   if (!Value.Check(EnvSchema, input)) {
     const errors = [...Value.Errors(EnvSchema, input)];
+
     console.error(
       "✗ Invalid environment configuration:\n" +
         errors.map((e) => `  - ${e.path}: ${e.message}`).join("\n"),
     );
+
     process.exit(1);
   }
   const decoded = Value.Decode(EnvSchema, input);
+
+  if (
+    decoded.REDIS_BACKEND === "upstash" &&
+    (!decoded.UPSTASH_REDIS_REST_URL || !decoded.UPSTASH_REDIS_REST_TOKEN)
+  ) {
+    console.error(
+      "✗ REDIS_BACKEND=upstash requires UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN",
+    );
+    process.exit(1);
+  }
+
   return decoded;
 }
 
